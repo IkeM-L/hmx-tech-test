@@ -2,11 +2,30 @@
 {
     public class BondTrade : BaseTrade
     {
-        public BondTrade(string tradeId_)
+        private readonly string _tradeType;
+
+        public BondTrade(string tradeId_, string tradeType)
         {
             if (string.IsNullOrWhiteSpace(tradeId_))
             {
                 throw new ArgumentException("A valid non null, non empty trade ID must be provided");
+            }
+
+            // Implemented as a switch to maintain easy extensibility for new trade types
+            // If this is not a core requirement, I would prefer to use an enum so the type checker can help maintain correctness
+            switch (tradeType)
+            {
+                case GovBondTradeType:
+                    _tradeType = GovBondTradeType;
+                    break;
+                case CorpBondTradeType:
+                    _tradeType = CorpBondTradeType;
+                    break;
+                case SupraBondTradeType:
+                    _tradeType = SupraBondTradeType;
+                    break;
+                default:
+                    throw new ArgumentException($"A valid trade type must be used, found {tradeType}");
             }
             
             TradeId = tradeId_;
@@ -14,7 +33,8 @@
 
         public const string GovBondTradeType = "GovBond";
         public const string CorpBondTradeType = "CorpBond";
+        public const string SupraBondTradeType = "SupraBond";
 
-        public override string TradeType { get { return GovBondTradeType; } }
+        public override string TradeType { get { return _tradeType; } }
     }
 }
