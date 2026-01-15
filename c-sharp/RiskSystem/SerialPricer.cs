@@ -33,7 +33,7 @@ namespace HmxLabs.TechTest.RiskSystem
             // Dynamic loading these like this will work, but the requirement for no compile-time dependency is strange and I would want to know why it
             // exists/if there is an alternative solution. This is very fragile.
             string assemblyPath = @"../../../../Pricers/bin/Debug/net8.0/Pricers.dll";
-            // This may throw, if it does this is a fatal issue for the program so we do not catch
+            // This may throw, but if it does this is a fatal issue for the application so we do not catch
             Assembly asm = Assembly.LoadFrom(assemblyPath);
             
 

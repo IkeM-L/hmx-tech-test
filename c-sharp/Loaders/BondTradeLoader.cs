@@ -14,9 +14,17 @@ namespace HmxLabs.TechTest.Loaders
             if (string.IsNullOrWhiteSpace(DataFile))
                 throw new InvalidOperationException("DataFile must be set before calling LoadTrades().");
 
-            var tradeList = new BondTradeList();
-            LoadTradesFromFile(DataFile, tradeList);
-            return tradeList;
+            using var stream = new StreamReader(DataFile);
+            // Discard header
+            _ = stream.ReadLine();
+
+            while (stream.ReadLine() is { } line)
+            {
+                if (string.IsNullOrWhiteSpace(line))
+                    continue;
+
+                yield return CreateTradeFromLine(line);
+            }
         }
 
         private static BondTrade CreateTradeFromLine(string line)
@@ -53,24 +61,6 @@ namespace HmxLabs.TechTest.Loaders
             };
 
             return trade;
-        }
-
-        private static void LoadTradesFromFile(string filename, BondTradeList tradeList)
-        {
-            if (tradeList is null) throw new ArgumentNullException(nameof(tradeList));
-
-            using var stream = new StreamReader(filename);
-
-            // Read and discard header (or treat empty file as no trades).
-            _ = stream.ReadLine();
-
-            while (stream.ReadLine() is { } line)
-            {
-                if (string.IsNullOrWhiteSpace(line))
-                    continue;
-
-                tradeList.Add(CreateTradeFromLine(line));
-            }
         }
     }
 }
