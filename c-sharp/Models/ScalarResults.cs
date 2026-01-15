@@ -14,16 +14,16 @@ namespace HmxLabs.TechTest.Models
                     return null;
                 }
 
-                    double? priceResult = null;
-                    string? error = null;
-                    if (_results.ContainsKey(tradeId_))
-                    {
-                        priceResult = _results[tradeId_];
-                    }
-                    if (_errors.ContainsKey(tradeId_))
-                    {
-                        error = _errors[tradeId_];
-                    }
+                double? priceResult = null;
+                string? error = null;
+                if (_results.ContainsKey(tradeId_))
+                {
+                    priceResult = _results[tradeId_];
+                }
+                if (_errors.ContainsKey(tradeId_))
+                {
+                    error = _errors[tradeId_];
+                }
 
                 return new ScalarResult(tradeId_, priceResult, error);
             }
@@ -51,12 +51,29 @@ namespace HmxLabs.TechTest.Models
 
         public IEnumerator<ScalarResult> GetEnumerator()
         {
-            throw new System.NotImplementedException();
+            // Enumerate results first
+            foreach (var (tradeId, value) in _results)
+            {
+                string? error = null;
+                if (_errors.TryGetValue(tradeId, out var e))
+                    error = e;
+
+                yield return new ScalarResult(tradeId, value, error);
+            }
+
+            // Then enumerate errors that don't have a result
+            foreach (var (tradeId, value) in _errors)
+            {
+                if (_results.ContainsKey(tradeId))
+                    continue;
+
+                yield return new ScalarResult(tradeId, null, value);
+            }
         }
 
         IEnumerator IEnumerable.GetEnumerator()
         {
-            throw new System.NotImplementedException();
+            return GetEnumerator();
         }
 
         private readonly Dictionary<string, double> _results = new Dictionary<string, double>();
