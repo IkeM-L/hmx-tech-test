@@ -1,6 +1,6 @@
 ﻿namespace HmxLabs.TechTest.RiskSystem
 {
-    public class PricingEngineConfig : List<PricingEngineConfigItem>
+    public sealed class PricingEngineConfig : System.Collections.Generic.List<PricingEngineConfigItem>
     {
     }
 }
