@@ -1,4 +1,5 @@
-﻿using HmxLabs.TechTest.Models;
+﻿using System.Text;
+using HmxLabs.TechTest.Models;
 
 namespace HmxLabs.TechTest.RiskSystem
 {
@@ -6,6 +7,8 @@ namespace HmxLabs.TechTest.RiskSystem
     {
         public void PrintResults(ScalarResults results_)
         {
+            var stringBuilder = new StringBuilder();
+            
             foreach (var result in results_)
             {
                 // Write code here to print out the results such that we have : 
@@ -14,7 +17,22 @@ namespace HmxLabs.TechTest.RiskSystem
                 // TradeID : Error
                 // If there is no error the output should be :
                 // TradeID : Result
+                stringBuilder.Append(result.TradeId);
+                if(result.Result != null)
+                {
+                    stringBuilder.Append(" : ");
+                    stringBuilder.Append(result.Result);
+                }
+                if(result.Error != null)
+                {
+                    stringBuilder.Append(" : ");
+                    stringBuilder.Append(result.Error);
+                }
+                stringBuilder.AppendLine();
             }
+            
+            Console.WriteLine(stringBuilder.ToString());
+            
         }
     }
 }
