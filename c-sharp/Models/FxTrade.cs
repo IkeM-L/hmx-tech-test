@@ -8,6 +8,7 @@ namespace HmxLabs.TechTest.Models
         public const string FxForwardTradeType = "FxFwd";
 
         private readonly string _tradeType;
+        private DateTime _valueDate;
 
         public FxTrade(string tradeType, string tradeId)
         {
@@ -16,7 +17,7 @@ namespace HmxLabs.TechTest.Models
 
             if (string.IsNullOrWhiteSpace(tradeId))
                 throw new ArgumentException("tradeId is required.", nameof(tradeId));
-
+            
             _tradeType = tradeType;
             TradeId = tradeId;
         }
@@ -26,6 +27,10 @@ namespace HmxLabs.TechTest.Models
             get { return _tradeType; }
         }
 
-        public DateTime ValueDate { get; set; }
+        public DateTime ValueDate
+        {
+            get { return _valueDate; }
+            set { _valueDate = value; }
+        }
     }
 }

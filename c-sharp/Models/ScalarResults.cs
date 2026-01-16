@@ -5,6 +5,9 @@ namespace HmxLabs.TechTest.Models
 {
     public class ScalarResults : IScalarResultReceiver, IEnumerable<ScalarResult>
     {
+        private readonly Dictionary<string, double> _results = new Dictionary<string, double>();
+        private readonly Dictionary<string, string?> _errors = new Dictionary<string, string?>();
+        
         public ScalarResult? this[string tradeId_]
         {
             get
@@ -75,8 +78,5 @@ namespace HmxLabs.TechTest.Models
         {
             return GetEnumerator();
         }
-
-        private readonly Dictionary<string, double> _results = new Dictionary<string, double>();
-        private readonly Dictionary<string, string?> _errors = new Dictionary<string, string?>();
     }
 }

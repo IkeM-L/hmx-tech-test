@@ -5,11 +5,14 @@ namespace HmxLabs.TechTest.RiskSystem
 {
     public class ScreenResultPrinter
     {
-        public void PrintResults(ScalarResults results_)
+        public void PrintResults(ScalarResults results)
         {
             var stringBuilder = new StringBuilder();
             
-            foreach (var result in results_)
+            if(results == null || !results.Any())
+                return;
+            
+            foreach (var result in results)
             {
                 // Write code here to print out the results such that we have : 
                 // TradeID : Result : Error

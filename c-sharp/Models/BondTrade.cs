@@ -4,15 +4,16 @@
     {
         private readonly string _tradeType;
 
-        public BondTrade(string tradeId_, string tradeType)
+        public BondTrade(string tradeId, string tradeType)
         {
-            if (string.IsNullOrWhiteSpace(tradeId_))
+            if (string.IsNullOrWhiteSpace(tradeId))
             {
                 throw new ArgumentException("A valid non null, non empty trade ID must be provided");
             }
 
-            // Implemented as a switch to maintain easy extensibility for new trade types
-            // If this is not a core requirement, I would prefer to use an enum so the type checker can help maintain correctness
+            // Implemented as a switch to maintain string semanics
+            // If this is not a core requirement, I would prefer to use an enum so the type checker can help verify correctness
+            // I have maintained 'string literal as fallback' semanitics for Fx trades and 'exact match to constant semantics' for Bond trades
             switch (tradeType)
             {
                 case GovBondTradeType:
@@ -28,7 +29,7 @@
                     throw new ArgumentException($"A valid trade type must be used, found {tradeType}");
             }
             
-            TradeId = tradeId_;
+            TradeId = tradeId;
         }
 
         public const string GovBondTradeType = "GovBond";

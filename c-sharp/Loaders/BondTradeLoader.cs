@@ -3,7 +3,7 @@ using HmxLabs.TechTest.Models;
 
 namespace HmxLabs.TechTest.Loaders
 {
-    public sealed class BondTradeLoader : ITradeLoader
+    public class BondTradeLoader : ITradeLoader
     {
         private const char Separator = ',';
 
@@ -29,12 +29,12 @@ namespace HmxLabs.TechTest.Loaders
 
         internal static BondTrade CreateTradeFromLine(string line)
         {
-            var items = line.Split(Separator);
+            var items = line.Split(Separator, StringSplitOptions.TrimEntries);
             if (items.Length < 7)
                 throw new FormatException($"Invalid trade line (expected 7 columns, got {items.Length}): {line}");
 
             string tradeType;
-            switch (items[0].Trim())
+            switch (items[0])
             {
                 case "GovBond":
                     tradeType = BondTrade.GovBondTradeType;

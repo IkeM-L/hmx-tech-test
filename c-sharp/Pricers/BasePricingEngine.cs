@@ -36,35 +36,35 @@ namespace HmxLabs.TechTest.Pricers
 
         protected int Delay { get; set; }
 
-        protected virtual void PriceTrade(ITrade trade_, IScalarResultReceiver resultReceiver_)
+        protected virtual void PriceTrade(ITrade trade, IScalarResultReceiver resultReceiver_)
         {
-            if (!IsTradeTypeSupported(trade_.TradeType))
+            if (!IsTradeTypeSupported(trade.TradeType))
             {
-                if (null == trade_.TradeId)
-                    throw new ArgumentException("Trade does not have a valid ID");
+                if (null == trade.TradeId)
+                    throw new ArgumentNullException(nameof(trade));
                 
-                resultReceiver_.AddError(trade_.TradeId, "Trade type not supported");
+                resultReceiver_.AddError(trade.TradeId, "Trade type not supported");
                 return;
             }
 
-            Console.WriteLine("Started pricing trade: " + trade_.TradeId);
+            Console.WriteLine("Started pricing trade: " + trade.TradeId);
             Thread.Sleep(Delay);
             var result = CalculateResult();
 
-            if (TradesToError.ContainsKey(trade_.TradeId!))
+            if (TradesToError.ContainsKey(trade.TradeId!))
             {
-                resultReceiver_.AddError(trade_.TradeId!, TradesToError[trade_.TradeId]);
+                resultReceiver_.AddError(trade.TradeId!, TradesToError[trade.TradeId]);
             }
             else
             {
-                resultReceiver_.AddResult(trade_.TradeId, result);
-                if (TradesToWarn.ContainsKey(trade_.TradeId))
+                resultReceiver_.AddResult(trade.TradeId, result);
+                if (TradesToWarn.ContainsKey(trade.TradeId))
                 {
-                    resultReceiver_.AddError(trade_.TradeId, TradesToWarn[trade_.TradeId]);
+                    resultReceiver_.AddError(trade.TradeId, TradesToWarn[trade.TradeId]);
                 }
             }
 
-            Console.WriteLine("Completed pricing trade: " + trade_.TradeId);
+            Console.WriteLine("Completed pricing trade: " + trade.TradeId);
         }
 
         protected virtual double CalculateResult()

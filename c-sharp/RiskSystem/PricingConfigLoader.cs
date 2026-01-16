@@ -23,13 +23,16 @@ namespace HmxLabs.TechTest.RiskSystem
             if (root == null || !string.Equals(root.Name.LocalName, "PricingEngines", StringComparison.Ordinal))
                 return config;
 
-            foreach (var e in root.Elements("Engine"))
+            foreach (var element in root.Elements("Engine"))
             {
-                var tradeTypeRaw = (string?)e.Attribute("tradeType");
-                var assembly = (string?)e.Attribute("assembly");
-                var typeName = (string?)e.Attribute("pricingEngine");
+                var tradeTypeRaw = (string?)element.Attribute("tradeType");
+                var assembly = (string?)element.Attribute("assembly");
+                var typeName = (string?)element.Attribute("pricingEngine");
 
                 var mappedTradeType = MapTradeType(tradeTypeRaw);
+                
+                if(tradeTypeRaw == null || assembly == null || typeName == null)
+                    continue;
 
                 config.Add(new PricingEngineConfigItem
                 {
@@ -47,13 +50,15 @@ namespace HmxLabs.TechTest.RiskSystem
             if (string.IsNullOrWhiteSpace(tradeType))
                 return tradeType;
 
-            // Map known XML values to the model constants.
+            // Map known XML values to the model constants, fallback to string literal.
             switch (tradeType)
             {
                 case "GovBond":
                     return BondTrade.GovBondTradeType;
                 case "CorpBond":
                     return BondTrade.CorpBondTradeType;
+                case "SupraBond":
+                    return BondTrade.SupraBondTradeType;
                 case "FxSpot":
                     return FxTrade.FxSpotTradeType;
                 case "FxFwd":
