@@ -48,7 +48,7 @@ namespace HmxLabs.TechTest.RiskSystem
         private static string? MapTradeType(string? tradeType)
         {
             if (string.IsNullOrWhiteSpace(tradeType))
-                return tradeType;
+                return null;
 
             // Map known XML values to the model constants, fallback to string literal.
             switch (tradeType)
