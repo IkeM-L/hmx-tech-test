@@ -13,7 +13,7 @@ namespace HmxLabs.TechTest.RiskSystem
             {
                 foreach (var trade in tradeContainter)
                 {
-                    if (!Pricers.TryGetValue(trade.TradeType, out var pricer))
+                    if (!TryGetPricer(trade.TradeType, out var pricer))
                     {
                         resultReceiver_.AddError(trade.TradeId, "No Pricing Engines available for this trade type");
                         continue;

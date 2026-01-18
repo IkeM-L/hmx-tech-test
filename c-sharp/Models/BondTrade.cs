@@ -11,9 +11,9 @@
                 throw new ArgumentException("A valid non null, non empty trade ID must be provided");
             }
 
-            // Implemented as a switch to maintain string semanics
-            // If this is not a core requirement, I would prefer to use an enum so the type checker can help verify correctness
-            // I have maintained 'string literal as fallback' semanitics for Fx trades and 'exact match to constant semantics' for Bond trades
+            // Implemented as a switch to maintain string semanics/compatibility with external code
+            // If this is not a core requirement, I would prefer to use an enum so the type checker can help verify correctness,
+            // make dictionary lookup faster, lower memory requirements, etc.
             switch (tradeType)
             {
                 case GovBondTradeType:

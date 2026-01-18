@@ -72,7 +72,7 @@ public class ParallelPricer : PricerBase
                     {
                         try
                         {
-                            if (!Pricers.TryGetValue(trade.TradeType, out var pricer))
+                            if (!TryGetPricer(trade.TradeType, out var pricer))
                             {
                                 lockedReceiver.AddError(trade.TradeId, "No Pricing Engines available for this trade type");
                                 continue;
@@ -88,8 +88,9 @@ public class ParallelPricer : PricerBase
                 }
                 catch (Exception ex)
                 {
-                    // Bubble up exceptions
-                    throw new AggregateException("Channel reader failed.", ex);
+                    // Log exceptions instead of bubbling up to avoid progress loss during long running task
+                    // Note that Console.Log should not be used in prod as console IO is slow and it is not inspectable
+                    Console.WriteLine($"Error processing trade {ex.Message}");
                 }
             });
         }
