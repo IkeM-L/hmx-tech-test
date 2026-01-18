@@ -45,10 +45,10 @@ namespace HmxLabs.TechTest.RiskSystem
             return config;
         }
 
-        private static string? MapTradeType(string? tradeType)
+        private static TradeType MapTradeType(string? tradeType)
         {
             if (string.IsNullOrWhiteSpace(tradeType))
-                return null;
+                return TradeType.None;
 
             // Map known XML values to the model constants, fallback to string literal.
             switch (tradeType)
@@ -64,7 +64,7 @@ namespace HmxLabs.TechTest.RiskSystem
                 case "FxFwd":
                     return FxTrade.FxForwardTradeType;
                 default:
-                    return tradeType;
+                    return TradeType.None;
             }
         }
     }

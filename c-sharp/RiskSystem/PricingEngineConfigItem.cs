@@ -1,8 +1,10 @@
-﻿namespace HmxLabs.TechTest.RiskSystem
+﻿using HmxLabs.TechTest.Models;
+
+namespace HmxLabs.TechTest.RiskSystem
 {
     public class PricingEngineConfigItem
     {
-        public string? TradeType { get; set; }
+        public TradeType TradeType { get; set; }
 
         public string? Assembly { get; set; }
 

@@ -19,7 +19,7 @@ namespace HmxLabs.TechTest.Pricers
             PriceTrade(trade_, resultReceiver_);
         }
 
-        public bool IsTradeTypeSupported(string tradeType_)
+        public bool IsTradeTypeSupported(TradeType tradeType_)
         {
             return _supportedTypes.ContainsKey(tradeType_);
         }
@@ -29,7 +29,7 @@ namespace HmxLabs.TechTest.Pricers
             Delay = 5000;
         }
 
-        protected  void AddSupportedTradeType(string tradeType_)
+        protected  void AddSupportedTradeType(TradeType tradeType_)
         {
             _supportedTypes.Add(tradeType_, 0);
         }
@@ -72,7 +72,7 @@ namespace HmxLabs.TechTest.Pricers
             return _random.NextDouble()*100;
         }
 
-        private readonly Dictionary<string, uint> _supportedTypes = new Dictionary<string, uint>();
+        private readonly Dictionary<TradeType, uint> _supportedTypes = new Dictionary<TradeType, uint>();
         private readonly Random _random = new Random();
         private static readonly Dictionary<string, string> TradesToError = new Dictionary<string, string>();
         private static readonly Dictionary<string, string> TradesToWarn = new Dictionary<string, string>();

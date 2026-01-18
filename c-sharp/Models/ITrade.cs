@@ -14,7 +14,7 @@ namespace HmxLabs.TechTest.Models
 
         double Rate { get; set; }
 
-        string TradeType { get; }
+        TradeType TradeType { get; }
 
         string TradeId { get; }
     }

@@ -6,7 +6,7 @@ namespace HmxLabs.TechTest.RiskSystem;
 
 public abstract class PricerBase
 {
-    private readonly Dictionary<string, IPricingEngine> _pricers = new Dictionary<string, IPricingEngine>();
+    private readonly Dictionary<TradeType, IPricingEngine> _pricers = new Dictionary<TradeType, IPricingEngine>();
 
     protected void LoadPricers(string assemblyPath)
     {
@@ -42,7 +42,7 @@ public abstract class PricerBase
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    protected bool TryGetPricer(string tradeType, out IPricingEngine? engine)
+    protected bool TryGetPricer(TradeType tradeType, out IPricingEngine? engine)
     {
         return _pricers.TryGetValue(tradeType, out engine);
     }

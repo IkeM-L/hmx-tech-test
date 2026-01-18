@@ -20,7 +20,7 @@ namespace HmxLabs.TechTest.ConsoleApp
             
             var tradeLoader = new SerialTradeLoader();
 
-            var allTrades = tradeLoader.LoadTrades();
+            var allTrades = tradeLoader.LoadTrades(); 
             var results = new ScalarResults();
             //var pricer = new SerialPricer();
             var pricer = new ParallelPricer();

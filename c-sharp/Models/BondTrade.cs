@@ -2,9 +2,9 @@
 {
     public class BondTrade : BaseTrade
     {
-        private readonly string _tradeType;
+        private readonly TradeType _tradeType;
 
-        public BondTrade(string tradeId, string tradeType)
+        public BondTrade(string tradeId, TradeType tradeType)
         {
             if (string.IsNullOrWhiteSpace(tradeId))
             {
@@ -32,10 +32,10 @@
             TradeId = tradeId;
         }
 
-        public const string GovBondTradeType = "GovBond";
-        public const string CorpBondTradeType = "CorpBond";
-        public const string SupraBondTradeType = "SupraBond";
+        public const TradeType GovBondTradeType = Models.TradeType.GovBond;
+        public const TradeType CorpBondTradeType = Models.TradeType.CorpBond;
+        public const TradeType SupraBondTradeType = Models.TradeType.SupraBond;
 
-        public override string TradeType { get { return _tradeType; } }
+        public override TradeType TradeType { get { return _tradeType; } }
     }
 }

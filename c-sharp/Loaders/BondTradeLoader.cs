@@ -33,7 +33,7 @@ namespace HmxLabs.TechTest.Loaders
             if (items.Length < 7)
                 throw new FormatException($"Invalid trade line (expected 7 columns, got {items.Length}): {line}");
 
-            string tradeType;
+            TradeType tradeType;
             switch (items[0])
             {
                 case "GovBond":

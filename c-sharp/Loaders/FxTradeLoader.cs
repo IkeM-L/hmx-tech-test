@@ -47,11 +47,18 @@ namespace HmxLabs.TechTest.Loaders
                 if (fxTradeArray.Length != 9)
                     throw new FormatException($"Invalid trade row (expected 9 fields): '{line}'");
 
-                var type = fxTradeArray[0];
-
-                if (!string.Equals(type, FxTrade.FxSpotTradeType, StringComparison.OrdinalIgnoreCase) && !string.Equals(type, FxTrade.FxForwardTradeType, StringComparison.OrdinalIgnoreCase))
+                TradeType type;
+                
+                switch (fxTradeArray[0])
                 {
-                    throw new NotSupportedException($"Unsupported FX trade type: {type}");
+                    case nameof(TradeType.FxSpot):
+                        type = FxTrade.FxSpotTradeType;
+                        break;
+                    case nameof(TradeType.FxFwd):
+                        type = FxTrade.FxForwardTradeType;
+                        break;
+                    default:
+                        throw new NotSupportedException($"Unsupported FX trade type {fxTradeArray[0]}");
                 }
 
                 // Type¬TradeDate¬Ccy1¬Ccy2¬Amount¬Rate¬ValueDate¬Counterparty¬TradeId
