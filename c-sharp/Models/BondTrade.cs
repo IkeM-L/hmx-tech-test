@@ -13,7 +13,7 @@
 
             // Implemented as a switch to maintain string semanics/compatibility with external code
             // If this is not a core requirement, I would prefer to use an enum so the type checker can help verify correctness,
-            // make dictionary lookup faster, lower memory requirements, etc.
+            // make dictionary lookup faster, lower memory requirements, etc. as in the EnumTradeType branch 
             switch (tradeType)
             {
                 case GovBondTradeType:
