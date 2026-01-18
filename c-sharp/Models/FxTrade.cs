@@ -12,13 +12,20 @@ namespace HmxLabs.TechTest.Models
 
         public FxTrade(string tradeType, string tradeId)
         {
-            if (string.IsNullOrWhiteSpace(tradeType))
-                throw new ArgumentException("tradeType is required.", nameof(tradeType));
-
             if (string.IsNullOrWhiteSpace(tradeId))
                 throw new ArgumentException("tradeId is required.", nameof(tradeId));
-            
-            _tradeType = tradeType;
+
+            switch (tradeType)
+            {
+                case FxForwardTradeType:
+                    _tradeType = FxSpotTradeType;
+                    break;
+                case FxSpotTradeType:
+                    _tradeType = FxForwardTradeType;
+                    break;
+                default:
+                    throw new ArgumentException($"A valid fx trade type must be used, found {tradeType}");
+            }
             TradeId = tradeId;
         }
 

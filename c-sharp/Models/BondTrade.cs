@@ -26,7 +26,7 @@
                     _tradeType = SupraBondTradeType;
                     break;
                 default:
-                    throw new ArgumentException($"A valid trade type must be used, found {tradeType}");
+                    throw new ArgumentException($"A valid bond trade type must be used, found {tradeType}");
             }
             
             TradeId = tradeId;
