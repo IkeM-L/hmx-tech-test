@@ -7,10 +7,14 @@ namespace HmxLabs.TechTest.ConsoleApp
     {
         public static void Main(string[] args_)
         {
-            // Prefer release compiled dll
+            // Prefer release compiled dll in release and debug in debug
+            #if RELEASE
             string assemblyPath = @"../../../../Pricers/bin/Release/net8.0/Pricers.dll";
-            if(!File.Exists(assemblyPath))
-                assemblyPath = @"../../../../Pricers/bin/Debug/net8.0/Pricers.dll";
+            #endif
+            #if DEBUG
+            string assemblyPath = @"../../../../Pricers/bin/Debug/net8.0/Pricers.dll";
+            #endif
+                
             if (!File.Exists(assemblyPath))
             {
                 Console.WriteLine("Please update the location of Pricers.dll");
