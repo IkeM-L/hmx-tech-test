@@ -13,7 +13,8 @@ public class ParallelPricer : PricerBase
     /// <param name="resultReceiver"></param>
     /// <param name="assemblyPath"></param>
     /// <param name="numThreads"></param>
-    public bool Price(IEnumerable<IEnumerable<ITrade>> tradeContainers, IScalarResultReceiver resultReceiver, string assemblyPath, int numThreads = -1)
+    /// <param name="queueSizeMultiple">numThreads*queueSizeMultiple = size of queue</param>
+    public bool Price(IEnumerable<IEnumerable<ITrade>> tradeContainers, IScalarResultReceiver resultReceiver, string assemblyPath, int numThreads = -1, int queueSizeMultiple = 2)
     {
         LoadPricers(assemblyPath);
         
@@ -27,7 +28,7 @@ public class ParallelPricer : PricerBase
         // all pricers take the same oom of time - we might want less if memory is highly 
         // restricted or more if the processing can be bursty (e.g. if one type of 
         // pricer is much faster)
-        var capacity = numThreads*2;
+        var capacity = numThreads*queueSizeMultiple;
         var channel = Channel.CreateBounded<ITrade>(new BoundedChannelOptions(capacity)
         {
             SingleWriter = true,   // only the enumerating producer writes
