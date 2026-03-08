@@ -1,76 +1,104 @@
 #include "BondTradeLoader.h"
-#include <fstream>
-#include <sstream>
-#include <stdexcept>
-#include <ctime>
-#include <iomanip>
-#include <chrono>
 
-BondTrade* BondTradeLoader::createTradeFromLine(std::string line) {
-    std::vector<std::string> items;
-    std::stringstream ss(line);
-    std::string item;
-    
-    while (std::getline(ss, item, separator)) {
-        items.push_back(item);
+#include <fstream>
+#include <stdexcept>
+
+#include "Utils/TradeParsingUtils.h"
+
+BondTrade* BondTradeLoader::createTradeFromLine(const std::string& line)
+{
+    const std::vector<std::string> items = TradeParsingUtils::splitLine(line, separator);
+
+    if (items.size() != 7)
+    {
+        throw std::runtime_error(
+            "Invalid bond trade line format: expected 7 fields, got " +
+            std::to_string(items.size()));
     }
-    
-    if (items.size() < 7) {
-        throw std::runtime_error("Invalid line format");
+
+    const std::string& tradeType = items[0];
+    const std::string& tradeId = items[6];
+
+    BondTrade* trade = new BondTrade(tradeId, tradeType);
+
+    try
+    {
+        trade->setTradeDate(TradeParsingUtils::parseDate(items[1]));
+        trade->setInstrument(items[2]);
+        trade->setCounterparty(items[3]);
+        trade->setNotional(std::stod(items[4]));
+        trade->setRate(std::stod(items[5]));
     }
-    
-    BondTrade* trade = new BondTrade(items[6]);
-    
-    std::tm tm = {};
-    std::istringstream dateStream(items[1]);
-    dateStream >> std::get_time(&tm, "%Y-%m-%d");
-    auto timePoint = std::chrono::system_clock::from_time_t(std::mktime(&tm));
-    trade->setTradeDate(timePoint);
-    
-    trade->setInstrument(items[2]);
-    trade->setCounterparty(items[3]);
-    trade->setNotional(std::stod(items[4]));
-    trade->setRate(std::stod(items[5]));
-    
+    catch (...)
+    {
+        delete trade;
+        throw;
+    }
+
     return trade;
 }
 
-void BondTradeLoader::loadTradesFromFile(std::string filename, BondTradeList& tradeList) {
-    if (filename.empty()) {
-        throw std::invalid_argument("Filename cannot be null");
-    }
-    
+void BondTradeLoader::loadTradesFromFile(const std::string& filename, BondTradeList& tradeList)
+{
+    TradeParsingUtils::validateFileNotEmpty(filename);
+
     std::ifstream stream(filename);
-    if (!stream.is_open()) {
+    if (!stream.is_open())
+    {
         throw std::runtime_error("Cannot open file: " + filename);
     }
-    
-    int lineCount = 0;
+
     std::string line;
-    while (std::getline(stream, line)) {
-        if (lineCount == 0) {
-        } else {
-            tradeList.add(createTradeFromLine(line));
+    bool firstLine = true;
+
+    while (std::getline(stream, line))
+    {
+        line = TradeParsingUtils::trim(line);
+
+        if (line.empty())
+        {
+            continue;
         }
-        lineCount++;
+
+        if (firstLine)
+        {
+            firstLine = false;
+
+            if (line.size() >= 3 &&
+                static_cast<unsigned char>(line[0]) == 0xEF &&
+                static_cast<unsigned char>(line[1]) == 0xBB &&
+                static_cast<unsigned char>(line[2]) == 0xBF)
+            {
+                line = line.substr(3);
+            }
+
+            continue;
+        }
+
+        tradeList.add(createTradeFromLine(line));
     }
 }
 
-std::vector<ITrade*> BondTradeLoader::loadTrades() {
+std::vector<ITrade*> BondTradeLoader::loadTrades()
+{
     BondTradeList tradeList;
     loadTradesFromFile(dataFile_, tradeList);
-    
+
     std::vector<ITrade*> result;
-    for (size_t i = 0; i < tradeList.size(); ++i) {
+    for (std::size_t i = 0; i < tradeList.size(); ++i)
+    {
         result.push_back(tradeList[i]);
     }
+
     return result;
 }
 
-std::string BondTradeLoader::getDataFile() const {
+std::string BondTradeLoader::getDataFile() const
+{
     return dataFile_;
 }
 
-void BondTradeLoader::setDataFile(const std::string& file) {
+void BondTradeLoader::setDataFile(const std::string& file)
+{
     dataFile_ = file;
 }
