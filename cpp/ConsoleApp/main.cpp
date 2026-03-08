@@ -5,8 +5,10 @@
 #include "../RiskSystem/ParallelPricer.h"
 #include "../RiskSystem/ScreenResultPrinter.h"
 
+#include <memory>
 #include <iostream>
 #include <string>
+#include <vector>
 
 #ifdef _WIN32
 #include <conio.h>
@@ -31,10 +33,8 @@ int _getch() {
 namespace
 {
     // Set to true to use StreamingTradeLoader.
-    // Note: with the current class design, the streaming loader performs pricing internally.
-    constexpr bool UseStreamingTradeLoader = false;
+    constexpr bool UseStreamingTradeLoader = true;
 
-    // Only used when UseStreamingTradeLoader == false.
     // If true, uses ParallelPricer. Otherwise uses SerialPricer.
     constexpr bool UseParallelPricer = true;
 }
@@ -44,7 +44,26 @@ int main(int argc, char* argv[]) {
 
     if (UseStreamingTradeLoader) {
         StreamingTradeLoader tradeLoader;
-        tradeLoader.loadAndPrice(&results);
+
+        if (UseParallelPricer) {
+            ParallelPricer pricer;
+            pricer.start(&results);
+            try {
+                tradeLoader.streamTrades([&pricer](ITrade* trade) {
+                    pricer.submit(trade);
+                });
+            } catch (...) {
+                pricer.finish();
+                throw;
+            }
+            pricer.finish();
+        } else {
+            SerialPricer pricer;
+            tradeLoader.streamTrades([&pricer, &results](ITrade* trade) {
+                std::unique_ptr<ITrade> tradeOwner(trade);
+                pricer.price({{tradeOwner.get()}}, &results);
+            });
+        }
     } else {
         SerialTradeLoader tradeLoader;
         auto allTrades = tradeLoader.loadTrades();
@@ -58,8 +77,7 @@ int main(int argc, char* argv[]) {
         }
     }
 
-    ScreenResultPrinter screenPrinter;
-    screenPrinter.printResults(results);
+    ScreenResultPrinter::printResults(results);
 
     std::cout << "Press any key to exit.." << std::endl;
     _getch();

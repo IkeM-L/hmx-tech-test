@@ -2,25 +2,16 @@
 #define STREAMINGTRADELOADER_H
 
 #include "../Loaders/ITradeLoader.h"
-#include "../Models/ITrade.h"
-#include "../Models/IScalarResultReceiver.h"
-#include "../Models/IPricingEngine.h"
+#include <functional>
 #include <memory>
-#include <map>
-#include <string>
 #include <vector>
 
 class StreamingTradeLoader {
 private:
-    std::map<std::string, IPricingEngine*> pricers_;
-    
-    std::vector<std::unique_ptr<ITradeLoader>> getTradeLoaders();
-    void loadPricers();
+    static std::vector<std::unique_ptr<ITradeLoader>> getTradeLoaders();
     
 public:
-    ~StreamingTradeLoader();
-    
-    void loadAndPrice(IScalarResultReceiver* resultReceiver);
+    static void streamTrades(const std::function<void(ITrade*)>& tradeHandler);
 };
 
 #endif // STREAMINGTRADELOADER_H

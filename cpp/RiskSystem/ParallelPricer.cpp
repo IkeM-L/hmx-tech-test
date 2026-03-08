@@ -1,49 +1,13 @@
 #include "ParallelPricer.h"
+
 #include "PricingEngineFactory.h"
 
-#include <condition_variable>
-#include <cstddef>
-#include <deque>
-#include <exception>
-#include <memory>
 #include <stdexcept>
-#include <thread>
-#include <vector>
-
-namespace
-{
-    class LockedScalarResultReceiver : public IScalarResultReceiver
-    {
-    public:
-        explicit LockedScalarResultReceiver(IScalarResultReceiver* inner)
-            : inner_(inner)
-        {
-            if (inner_ == nullptr)
-            {
-                throw std::invalid_argument("resultReceiver");
-            }
-        }
-
-        void addResult(const std::string& tradeId, double result) override
-        {
-            std::lock_guard lock(mutex_);
-            inner_->addResult(tradeId, result);
-        }
-
-        void addError(const std::string& tradeId, const std::string& error) override
-        {
-            std::lock_guard lock(mutex_);
-            inner_->addError(tradeId, error);
-        }
-
-    private:
-        IScalarResultReceiver* inner_;
-        std::mutex mutex_;
-    };
-}
 
 ParallelPricer::~ParallelPricer()
 {
+    shutdown(false);
+
     for (auto& entry : pricers_)
     {
         delete entry.second;
@@ -61,151 +25,223 @@ void ParallelPricer::loadPricers()
     pricers_ = PricingEngineFactory::createPricersFromConfigFile("./PricingConfig/PricingEngines.xml");
 }
 
-void ParallelPricer::price(const std::vector<std::vector<ITrade*>>& tradeContainers,
-                           IScalarResultReceiver* resultReceiver)
+void ParallelPricer::start(IScalarResultReceiver* resultReceiver)
 {
     if (resultReceiver == nullptr)
     {
         throw std::invalid_argument("resultReceiver");
     }
 
+    if (acceptingTrades_ || !workerThreads_.empty())
+    {
+        throw std::logic_error("ParallelPricer is already running");
+    }
+
     loadPricers();
 
-    LockedScalarResultReceiver lockedReceiver(resultReceiver);
+    lockedReceiver_ = std::make_unique<LockedScalarResultReceiver>(resultReceiver);
+    firstFatalError_ = nullptr;
+    queue_.clear();
 
     const unsigned int hardwareThreads = std::thread::hardware_concurrency();
     const std::size_t numThreads = hardwareThreads > 0 ? hardwareThreads : 4;
-    const std::size_t queueCapacity = numThreads * 2;
+    queueCapacity_ = numThreads * 2;
 
-    std::deque<ITrade*> queue;
-    std::mutex queueMutex;
-    std::condition_variable queueNotEmpty;
-    std::condition_variable queueNotFull;
-    bool producerDone = false;
-
-    std::exception_ptr firstFatalError = nullptr;
-    std::mutex fatalErrorMutex;
-
-    auto recordFatalError = [&](const std::exception_ptr& exPtr)
     {
-        std::lock_guard lock(fatalErrorMutex);
-        if (firstFatalError == nullptr)
+        std::lock_guard lock(queueMutex_);
+        acceptingTrades_ = true;
+    }
+
+    workerThreads_.reserve(numThreads);
+    for (std::size_t i = 0; i < numThreads; ++i)
+    {
+        workerThreads_.emplace_back(&ParallelPricer::workerLoop, this);
+    }
+}
+
+void ParallelPricer::submit(ITrade* trade)
+{
+    enqueueTrade(trade, true);
+}
+
+void ParallelPricer::enqueueTrade(ITrade* trade, const bool deleteAfterPricing)
+{
+    if (trade == nullptr)
+    {
+        throw std::invalid_argument("trade");
+    }
+
+    std::unique_lock lock(queueMutex_);
+    queueNotFull_.wait(lock, [this]()
+    {
+        return !acceptingTrades_ || queue_.size() < queueCapacity_;
+    });
+
+    if (!acceptingTrades_)
+    {
+        throw std::logic_error("ParallelPricer is not running");
+    }
+
+    queue_.push_back(QueuedTrade{trade, deleteAfterPricing});
+
+    lock.unlock();
+    queueNotEmpty_.notify_one();
+}
+
+void ParallelPricer::workerLoop()
+{
+    auto recordFatalError = [this](const std::exception_ptr& exPtr)
+    {
+        std::lock_guard lock(fatalErrorMutex_);
+        if (firstFatalError_ == nullptr)
         {
-            firstFatalError = exPtr;
+            firstFatalError_ = exPtr;
         }
     };
 
-    auto producer = [&]
+    while (true)
     {
+        QueuedTrade queuedTrade;
+
+        {
+            std::unique_lock lock(queueMutex_);
+            queueNotEmpty_.wait(lock, [this]()
+            {
+                return !queue_.empty() || !acceptingTrades_;
+            });
+
+            if (queue_.empty())
+            {
+                if (!acceptingTrades_)
+                {
+                    return;
+                }
+                continue;
+            }
+
+            queuedTrade = queue_.front();
+            queue_.pop_front();
+        }
+
+        queueNotFull_.notify_one();
+
+        std::unique_ptr<ITrade> ownedTrade;
+        ITrade* trade = queuedTrade.trade;
+        if (queuedTrade.deleteAfterPricing)
+        {
+            ownedTrade.reset(trade);
+        }
+
+        if (trade == nullptr)
+        {
+            continue;
+        }
+
         try
         {
-            for (const auto& tradeContainer : tradeContainers)
+            const std::string tradeType = trade->getTradeType();
+            const auto it = pricers_.find(tradeType);
+
+            if (it == pricers_.end())
             {
-                for (ITrade* trade : tradeContainer)
-                {
-                    std::unique_lock lock(queueMutex);
-                    queueNotFull.wait(lock, [&]()
-                    {
-                        return queue.size() < queueCapacity;
-                    });
+                lockedReceiver_->addError(
+                    trade->getTradeId(),
+                    "No Pricing Engines available for this trade type");
+                continue;
+            }
 
-                    queue.push_back(trade);
-
-                    lock.unlock();
-                    queueNotEmpty.notify_one();
-                }
+            it->second->price(trade, lockedReceiver_.get());
+        }
+        catch (const std::exception& ex)
+        {
+            try
+            {
+                lockedReceiver_->addError(trade->getTradeId(), ex.what());
+            }
+            catch (...)
+            {
+                recordFatalError(std::current_exception());
             }
         }
         catch (...)
         {
-            recordFatalError(std::current_exception());
-        }
-
-        {
-            std::lock_guard lock(queueMutex);
-            producerDone = true;
-        }
-        queueNotEmpty.notify_all();
-    };
-
-    auto consumer = [&]()
-    {
-        while (true)
-        {
-            ITrade* trade = nullptr;
-
-            {
-                std::unique_lock lock(queueMutex);
-                queueNotEmpty.wait(lock, [&]()
-                {
-                    return !queue.empty() || producerDone;
-                });
-
-                if (queue.empty())
-                {
-                    if (producerDone)
-                    {
-                        return;
-                    }
-                    continue;
-                }
-
-                trade = queue.front();
-                queue.pop_front();
-            }
-
-            queueNotFull.notify_one();
-
-            if (trade == nullptr)
-            {
-                continue;
-            }
-
             try
             {
-                const std::string tradeType = trade->getTradeType();
-                auto it = pricers_.find(tradeType);
-
-                if (it == pricers_.end())
-                {
-                    lockedReceiver.addError(
-                        trade->getTradeId(),
-                        "No Pricing Engines available for this trade type");
-                    continue;
-                }
-
-                it->second->price(trade, &lockedReceiver);
-            }
-            catch (const std::exception& ex)
-            {
-                lockedReceiver.addError(trade->getTradeId(), ex.what());
+                lockedReceiver_->addError(trade->getTradeId(), "Unknown pricing error");
             }
             catch (...)
             {
-                lockedReceiver.addError(trade->getTradeId(), "Unknown pricing error");
+                recordFatalError(std::current_exception());
             }
         }
-    };
+    }
+}
 
-    std::thread producerThread(producer);
+void ParallelPricer::finish()
+{
+    shutdown(true);
+}
 
-    std::vector<std::thread> consumerThreads;
-    consumerThreads.reserve(numThreads);
-
-    for (std::size_t i = 0; i < numThreads; ++i)
+void ParallelPricer::shutdown(const bool rethrowFatalError)
+{
     {
-        consumerThreads.emplace_back(consumer);
+        std::lock_guard lock(queueMutex_);
+        acceptingTrades_ = false;
     }
 
-    producerThread.join();
+    queueNotEmpty_.notify_all();
+    queueNotFull_.notify_all();
 
-    for (auto& thread : consumerThreads)
+    for (auto& workerThread : workerThreads_)
     {
-        thread.join();
+        if (workerThread.joinable())
+        {
+            workerThread.join();
+        }
+    }
+    workerThreads_.clear();
+
+    while (!queue_.empty())
+    {
+        auto queuedTrade = queue_.front();
+        queue_.pop_front();
+        if (queuedTrade.deleteAfterPricing)
+        {
+            delete queuedTrade.trade;
+        }
     }
 
-    if (firstFatalError != nullptr)
+    lockedReceiver_.reset();
+
+    const std::exception_ptr fatalError = firstFatalError_;
+    firstFatalError_ = nullptr;
+
+    if (rethrowFatalError && fatalError != nullptr)
     {
-        std::rethrow_exception(firstFatalError);
+        std::rethrow_exception(fatalError);
     }
+}
+
+void ParallelPricer::price(const std::vector<std::vector<ITrade*>>& tradeContainers,
+                           IScalarResultReceiver* resultReceiver)
+{
+    start(resultReceiver);
+
+    try
+    {
+        for (const auto& tradeContainer : tradeContainers)
+        {
+            for (ITrade* trade : tradeContainer)
+            {
+                enqueueTrade(trade, false);
+            }
+        }
+    }
+    catch (...)
+    {
+        shutdown(false);
+        throw;
+    }
+
+    finish();
 }
