@@ -4,10 +4,11 @@
 #include "IScalarResultReceiver.h"
 #include "ScalarResult.h"
 #include <map>
-#include <vector>
+#include <iterator>
+#include <memory>
 #include <optional>
 #include <string>
-#include <iterator>
+#include <vector>
 
 class ScalarResults : public IScalarResultReceiver {
 public:
@@ -39,7 +40,7 @@ public:
 
         /// Creates an iterator over a snapshot of trade IDs.
         Iterator(const ScalarResults* parent,
-                 std::vector<std::string> tradeIds,
+                 std::shared_ptr<const std::vector<std::string>> tradeIds,
                  std::size_t index);
 
         /// Advances the iterator to the next result.
@@ -51,7 +52,7 @@ public:
 
     private:
         const ScalarResults* parent_ = nullptr;
-        std::vector<std::string> tradeIds_;
+        std::shared_ptr<const std::vector<std::string>> tradeIds_;
         std::size_t index_ = 0;
     };
 
@@ -61,6 +62,8 @@ public:
     [[nodiscard]] Iterator end() const;
 
 private:
+    [[nodiscard]] std::shared_ptr<const std::vector<std::string>> buildTradeIdSnapshot() const;
+
     std::map<std::string, double> results_;
     std::map<std::string, std::string> errors_;
 };

@@ -36,25 +36,23 @@ void ScalarResults::addError(const std::string& tradeId, const std::string& erro
     errors_[tradeId] = error;
 }
 
-ScalarResults::Iterator::Iterator(const ScalarResults* parent,
-                                  std::vector<std::string> tradeIds,
-                                  const std::size_t index)
+ScalarResults::Iterator::Iterator(const ScalarResults* parent, std::shared_ptr<const std::vector<std::string>> tradeIds, const std::size_t index)
     : parent_(parent), tradeIds_(std::move(tradeIds)), index_(index) {
 }
 
 ScalarResults::Iterator& ScalarResults::Iterator::operator++() {
-    if (index_ < tradeIds_.size()) {
+    if (tradeIds_ != nullptr && index_ < tradeIds_->size()) {
         ++index_;
     }
     return *this;
 }
 
 ScalarResult ScalarResults::Iterator::operator*() const {
-    if (parent_ == nullptr || index_ >= tradeIds_.size()) {
+    if (parent_ == nullptr || tradeIds_ == nullptr || index_ >= tradeIds_->size()) {
         throw std::out_of_range("Iterator cannot be dereferenced");
     }
 
-    const std::string& tradeId = tradeIds_[index_];
+    const std::string& tradeId = (*tradeIds_)[index_];
     std::optional<ScalarResult> result = (*parent_)[tradeId];
 
     if (!result.has_value()) {
@@ -65,12 +63,16 @@ ScalarResult ScalarResults::Iterator::operator*() const {
 }
 
 bool ScalarResults::Iterator::operator!=(const Iterator& other) const {
+    if (other.parent_ == nullptr && other.tradeIds_ == nullptr) {
+        return parent_ != nullptr && tradeIds_ != nullptr && index_ < tradeIds_->size();
+    }
+
     return parent_ != other.parent_ ||
            index_ != other.index_ ||
            tradeIds_ != other.tradeIds_;
 }
 
-ScalarResults::Iterator ScalarResults::begin() const {
+std::shared_ptr<const std::vector<std::string>> ScalarResults::buildTradeIdSnapshot() const {
     std::set<std::string> uniqueTradeIds;
 
     for (const auto& [fst, snd] : results_) {
@@ -81,25 +83,15 @@ ScalarResults::Iterator ScalarResults::begin() const {
         uniqueTradeIds.insert(fst);
     }
 
+    return std::make_shared<const std::vector<std::string>>(uniqueTradeIds.begin(), uniqueTradeIds.end());
+}
+
+ScalarResults::Iterator ScalarResults::begin() const {
     // The iterator walks a stable snapshot so range-based for loops are not tied
     // to whichever backing map currently contains a given trade ID.
-    std::vector tradeIds(uniqueTradeIds.begin(), uniqueTradeIds.end());
-    return Iterator(this, std::move(tradeIds), 0);
+    return Iterator(this, buildTradeIdSnapshot(), 0);
 }
 
 ScalarResults::Iterator ScalarResults::end() const {
-    std::set<std::string> uniqueTradeIds;
-
-    for (const auto& [fst, snd] : results_) {
-        uniqueTradeIds.insert(fst);
-    }
-
-    for (const auto& [fst, snd] : errors_) {
-        uniqueTradeIds.insert(fst);
-    }
-
-    // Rebuild the same snapshot for the sentinel so `begin()`/`end()` compare
-    // against the same ordered set of trade IDs.
-    std::vector tradeIds(uniqueTradeIds.begin(), uniqueTradeIds.end());
-    return Iterator(this, std::move(tradeIds), tradeIds.size());
+    return Iterator();
 }

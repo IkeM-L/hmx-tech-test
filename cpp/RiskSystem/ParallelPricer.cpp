@@ -258,12 +258,12 @@ void ParallelPricer::shutdown(const bool rethrowFatalError)
     }
     workerThreads_.clear();
 
-    while (!queue_.empty())
     {
-        // Any remaining streamed trades are still owned by the queue entry and
-        // will be released here when the moved-from local goes out of scope.
-        auto queuedTrade = std::move(queue_.front());
-        queue_.pop_front();
+        std::lock_guard lock(queueMutex_);
+
+        // Draining the queue stays under the mutex so concurrent rejected
+        // submitters cannot race with shutdown on the deque itself.
+        queue_.clear();
     }
 
     lockedReceiver_.reset();

@@ -6,6 +6,20 @@
 #include <stdexcept>
 #include <vector>
 
+namespace
+{
+    void skipBom(std::string& line)
+    {
+        if (line.size() >= 3 &&
+            static_cast<unsigned char>(line[0]) == 0xEF &&
+            static_cast<unsigned char>(line[1]) == 0xBB &&
+            static_cast<unsigned char>(line[2]) == 0xBF)
+        {
+            line = line.substr(3);
+        }
+    }
+}
+
 std::unique_ptr<FxTrade> FxTradeLoader::createTradeFromLine(
     const std::string& line,
     const int lineNumber)
@@ -49,6 +63,7 @@ void FxTradeLoader::forEachTrade(
 
     std::string line;
     int lineNumber = 0;
+    int nonEmptyLineNumber = 0;
 
     while (std::getline(stream, line))
     {
@@ -60,7 +75,14 @@ void FxTradeLoader::forEachTrade(
             continue;
         }
 
-        if (lineNumber == 1 || lineNumber == 2)
+        ++nonEmptyLineNumber;
+
+        if (nonEmptyLineNumber == 1)
+        {
+            skipBom(line);
+        }
+
+        if (nonEmptyLineNumber <= 2)
         {
             continue;
         }
