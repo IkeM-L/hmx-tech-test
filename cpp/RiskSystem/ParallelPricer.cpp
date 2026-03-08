@@ -1,28 +1,58 @@
 #include "ParallelPricer.h"
 
 #include "PricingEngineFactory.h"
+#include "PricingConfigLoader.h"
 
 #include <stdexcept>
 
 ParallelPricer::~ParallelPricer()
 {
     shutdown(false);
-
-    for (auto& entry : pricers_)
-    {
-        delete entry.second;
-    }
-    pricers_.clear();
+    clearWorkerPricers();
 }
 
-void ParallelPricer::loadPricers()
+void ParallelPricer::loadPricers(const std::size_t workerCount)
 {
-    if (!pricers_.empty())
+    if (pricerConfig_.empty())
+    {
+        PricingConfigLoader pricingConfigLoader;
+        pricingConfigLoader.setConfigFile("./PricingConfig/PricingEngines.xml");
+        pricerConfig_ = pricingConfigLoader.loadConfig();
+    }
+
+    if (workerPricers_.size() == workerCount)
     {
         return;
     }
 
-    pricers_ = PricingEngineFactory::createPricersFromConfigFile("./PricingConfig/PricingEngines.xml");
+    clearWorkerPricers();
+
+    try
+    {
+        workerPricers_.reserve(workerCount);
+        for (std::size_t i = 0; i < workerCount; ++i)
+        {
+            workerPricers_.push_back(PricingEngineFactory::createPricersFromConfig(pricerConfig_));
+        }
+    }
+    catch (...)
+    {
+        clearWorkerPricers();
+        throw;
+    }
+}
+
+void ParallelPricer::clearWorkerPricers()
+{
+    for (auto& workerPricers : workerPricers_)
+    {
+        for (auto& entry : workerPricers)
+        {
+            delete entry.second;
+        }
+        workerPricers.clear();
+    }
+    workerPricers_.clear();
 }
 
 void ParallelPricer::start(IScalarResultReceiver* resultReceiver)
@@ -37,14 +67,13 @@ void ParallelPricer::start(IScalarResultReceiver* resultReceiver)
         throw std::logic_error("ParallelPricer is already running");
     }
 
-    loadPricers();
-
     lockedReceiver_ = std::make_unique<LockedScalarResultReceiver>(resultReceiver);
     firstFatalError_ = nullptr;
     queue_.clear();
 
     const unsigned int hardwareThreads = std::thread::hardware_concurrency();
     const std::size_t numThreads = hardwareThreads > 0 ? hardwareThreads : 4;
+    loadPricers(numThreads);
     queueCapacity_ = numThreads * 2;
 
     {
@@ -55,7 +84,7 @@ void ParallelPricer::start(IScalarResultReceiver* resultReceiver)
     workerThreads_.reserve(numThreads);
     for (std::size_t i = 0; i < numThreads; ++i)
     {
-        workerThreads_.emplace_back(&ParallelPricer::workerLoop, this);
+        workerThreads_.emplace_back(&ParallelPricer::workerLoop, this, i);
     }
 }
 
@@ -88,7 +117,7 @@ void ParallelPricer::enqueueTrade(ITrade* trade, const bool deleteAfterPricing)
     queueNotEmpty_.notify_one();
 }
 
-void ParallelPricer::workerLoop()
+void ParallelPricer::workerLoop(const std::size_t workerIndex)
 {
     auto recordFatalError = [this](const std::exception_ptr& exPtr)
     {
@@ -137,12 +166,14 @@ void ParallelPricer::workerLoop()
             continue;
         }
 
+        auto& pricers = workerPricers_[workerIndex];
+
         try
         {
             const std::string tradeType = trade->getTradeType();
-            const auto it = pricers_.find(tradeType);
+            const auto it = pricers.find(tradeType);
 
-            if (it == pricers_.end())
+            if (it == pricers.end())
             {
                 lockedReceiver_->addError(
                     trade->getTradeId(),
@@ -203,7 +234,7 @@ void ParallelPricer::shutdown(const bool rethrowFatalError)
 
     while (!queue_.empty())
     {
-        auto queuedTrade = queue_.front();
+        const auto queuedTrade = queue_.front();
         queue_.pop_front();
         if (queuedTrade.deleteAfterPricing)
         {

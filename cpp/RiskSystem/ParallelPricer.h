@@ -4,6 +4,7 @@
 #include "../Models/IPricingEngine.h"
 #include "../Models/ITrade.h"
 #include "../Models/IScalarResultReceiver.h"
+#include "PricingEngineConfig.h"
 #include <condition_variable>
 #include <deque>
 #include <exception>
@@ -45,7 +46,8 @@ private:
         bool deleteAfterPricing = false;
     };
 
-    std::map<std::string, IPricingEngine*> pricers_;
+    PricingEngineConfig pricerConfig_;
+    std::vector<std::map<std::string, IPricingEngine*>> workerPricers_;
     std::unique_ptr<LockedScalarResultReceiver> lockedReceiver_;
     std::deque<QueuedTrade> queue_;
     std::vector<std::thread> workerThreads_;
@@ -57,8 +59,9 @@ private:
     std::size_t queueCapacity_ = 0;
     bool acceptingTrades_ = false;
     
-    void loadPricers();
-    void workerLoop();
+    void loadPricers(std::size_t workerCount);
+    void clearWorkerPricers();
+    void workerLoop(std::size_t workerIndex);
     void enqueueTrade(ITrade* trade, bool deleteAfterPricing);
     void shutdown(bool rethrowFatalError);
     
