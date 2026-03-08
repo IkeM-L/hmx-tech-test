@@ -1,9 +1,24 @@
 #include "BondTradeLoader.h"
+#include "Utils/TradeParsingUtils.h"
 
 #include <fstream>
+#include <memory>
 #include <stdexcept>
+#include <vector>
 
-#include "Utils/TradeParsingUtils.h"
+namespace
+{
+    void skipBom(std::string& line)
+    {
+        if (line.size() >= 3 &&
+            static_cast<unsigned char>(line[0]) == 0xEF &&
+            static_cast<unsigned char>(line[1]) == 0xBB &&
+            static_cast<unsigned char>(line[2]) == 0xBF)
+        {
+            line = line.substr(3);
+        }
+    }
+}
 
 BondTrade* BondTradeLoader::createTradeFromLine(const std::string& line)
 {
@@ -19,33 +34,25 @@ BondTrade* BondTradeLoader::createTradeFromLine(const std::string& line)
     const std::string& tradeType = items[0];
     const std::string& tradeId = items[6];
 
-    BondTrade* trade = new BondTrade(tradeId, tradeType);
+    auto trade = std::make_unique<BondTrade>(tradeId, tradeType);
 
-    try
-    {
-        trade->setTradeDate(TradeParsingUtils::parseDate(items[1]));
-        trade->setInstrument(items[2]);
-        trade->setCounterparty(items[3]);
-        trade->setNotional(std::stod(items[4]));
-        trade->setRate(std::stod(items[5]));
-    }
-    catch (...)
-    {
-        delete trade;
-        throw;
-    }
+    trade->setTradeDate(TradeParsingUtils::parseDate(items[1]));
+    trade->setInstrument(items[2]);
+    trade->setCounterparty(items[3]);
+    trade->setNotional(std::stod(items[4]));
+    trade->setRate(std::stod(items[5]));
 
-    return trade;
+    return trade.release();
 }
 
-void BondTradeLoader::loadTradesFromFile(const std::string& filename, BondTradeList& tradeList)
+void BondTradeLoader::forEachTrade(const std::function<void(ITrade*)>& tradeHandler) const
 {
-    TradeParsingUtils::validateFileNotEmpty(filename);
+    TradeParsingUtils::validateFileNotEmpty(dataFile_);
 
-    std::ifstream stream(filename);
+    std::ifstream stream(dataFile_);
     if (!stream.is_open())
     {
-        throw std::runtime_error("Cannot open file: " + filename);
+        throw std::runtime_error("Cannot open file: " + dataFile_);
     }
 
     std::string line;
@@ -63,34 +70,29 @@ void BondTradeLoader::loadTradesFromFile(const std::string& filename, BondTradeL
         if (firstLine)
         {
             firstLine = false;
-
-            if (line.size() >= 3 &&
-                static_cast<unsigned char>(line[0]) == 0xEF &&
-                static_cast<unsigned char>(line[1]) == 0xBB &&
-                static_cast<unsigned char>(line[2]) == 0xBF)
-            {
-                line = line.substr(3);
-            }
-
-            continue;
+            skipBom(line);
+            continue; // skip first non-empty line as header
         }
 
-        tradeList.add(createTradeFromLine(line));
+        tradeHandler(createTradeFromLine(line));
     }
 }
 
 std::vector<ITrade*> BondTradeLoader::loadTrades()
 {
-    BondTradeList tradeList;
-    loadTradesFromFile(dataFile_, tradeList);
-
     std::vector<ITrade*> result;
-    for (std::size_t i = 0; i < tradeList.size(); ++i)
+
+    forEachTrade([&result](ITrade* trade)
     {
-        result.push_back(tradeList[i]);
-    }
+        result.push_back(trade);
+    });
 
     return result;
+}
+
+void BondTradeLoader::streamTrades(const std::function<void(ITrade*)>& tradeHandler)
+{
+    forEachTrade(tradeHandler);
 }
 
 std::string BondTradeLoader::getDataFile() const

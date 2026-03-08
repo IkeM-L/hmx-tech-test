@@ -7,12 +7,12 @@
 class PricingConfigLoader {
 private:
     std::string configFile_;
-    PricingEngineConfig parseXml(const std::string& content);
+    static PricingEngineConfig parseXml(const std::string& content);
     
 public:
-    std::string getConfigFile() const;
+    [[nodiscard]] std::string getConfigFile() const;
     void setConfigFile(const std::string& file);
-    PricingEngineConfig loadConfig();
+    [[nodiscard]] PricingEngineConfig loadConfig() const;
 };
 
 #endif // PRICINGCONFIGLOADER_H

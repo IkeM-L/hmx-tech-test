@@ -1,4 +1,6 @@
 #include "ScalarResults.h"
+
+#include <set>
 #include <stdexcept>
 
 ScalarResults::~ScalarResults() = default;
@@ -11,13 +13,11 @@ std::optional<ScalarResult> ScalarResults::operator[](const std::string& tradeId
     std::optional<double> priceResult = std::nullopt;
     std::optional<std::string> error = std::nullopt;
 
-    auto resultIt = results_.find(tradeId);
-    if (resultIt != results_.end()) {
+    if (const auto resultIt = results_.find(tradeId); resultIt != results_.end()) {
         priceResult = resultIt->second;
     }
 
-    auto errorIt = errors_.find(tradeId);
-    if (errorIt != errors_.end()) {
+    if (const auto errorIt = errors_.find(tradeId); errorIt != errors_.end()) {
         error = errorIt->second;
     }
 
@@ -36,22 +36,66 @@ void ScalarResults::addError(const std::string& tradeId, const std::string& erro
     errors_[tradeId] = error;
 }
 
+ScalarResults::Iterator::Iterator(const ScalarResults* parent,
+                                  std::vector<std::string> tradeIds,
+                                  const std::size_t index)
+    : parent_(parent), tradeIds_(std::move(tradeIds)), index_(index) {
+}
+
 ScalarResults::Iterator& ScalarResults::Iterator::operator++() {
-    throw std::runtime_error("Iterator not implemented");
+    if (index_ < tradeIds_.size()) {
+        ++index_;
+    }
+    return *this;
 }
 
 ScalarResult ScalarResults::Iterator::operator*() const {
-    throw std::runtime_error("Iterator not implemented");
+    if (parent_ == nullptr || index_ >= tradeIds_.size()) {
+        throw std::out_of_range("Iterator cannot be dereferenced");
+    }
+
+    const std::string& tradeId = tradeIds_[index_];
+    std::optional<ScalarResult> result = (*parent_)[tradeId];
+
+    if (!result.has_value()) {
+        throw std::runtime_error("Iterator points to invalid trade ID");
+    }
+
+    return *result;
 }
 
 bool ScalarResults::Iterator::operator!=(const Iterator& other) const {
-    throw std::runtime_error("Iterator not implemented");
+    return parent_ != other.parent_ ||
+           index_ != other.index_ ||
+           tradeIds_ != other.tradeIds_;
 }
 
 ScalarResults::Iterator ScalarResults::begin() const {
-    throw std::runtime_error("Not implemented");
+    std::set<std::string> uniqueTradeIds;
+
+    for (const auto& [fst, snd] : results_) {
+        uniqueTradeIds.insert(fst);
+    }
+
+    for (const auto& [fst, snd] : errors_) {
+        uniqueTradeIds.insert(fst);
+    }
+
+    std::vector tradeIds(uniqueTradeIds.begin(), uniqueTradeIds.end());
+    return Iterator(this, std::move(tradeIds), 0);
 }
 
 ScalarResults::Iterator ScalarResults::end() const {
-    throw std::runtime_error("Not implemented");
+    std::set<std::string> uniqueTradeIds;
+
+    for (const auto& [fst, snd] : results_) {
+        uniqueTradeIds.insert(fst);
+    }
+
+    for (const auto& [fst, snd] : errors_) {
+        uniqueTradeIds.insert(fst);
+    }
+
+    std::vector tradeIds(uniqueTradeIds.begin(), uniqueTradeIds.end());
+    return Iterator(this, std::move(tradeIds), tradeIds.size());
 }

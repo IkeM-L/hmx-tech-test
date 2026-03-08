@@ -4,6 +4,7 @@
 #include "../RiskSystem/SerialPricer.h"
 #include "../RiskSystem/ParallelPricer.h"
 #include "../RiskSystem/ScreenResultPrinter.h"
+
 #include <iostream>
 #include <string>
 
@@ -27,19 +28,41 @@ int _getch() {
 }
 #endif
 
+namespace
+{
+    // Set to true to use StreamingTradeLoader.
+    // Note: with the current class design, the streaming loader performs pricing internally.
+    constexpr bool UseStreamingTradeLoader = false;
+
+    // Only used when UseStreamingTradeLoader == false.
+    // If true, uses ParallelPricer. Otherwise uses SerialPricer.
+    constexpr bool UseParallelPricer = true;
+}
+
 int main(int argc, char* argv[]) {
-    SerialTradeLoader tradeLoader;
-    auto allTrades = tradeLoader.loadTrades();
-    
     ScalarResults results;
-    SerialPricer pricer;
-    pricer.price(allTrades, &results);
-    
+
+    if (UseStreamingTradeLoader) {
+        StreamingTradeLoader tradeLoader;
+        tradeLoader.loadAndPrice(&results);
+    } else {
+        SerialTradeLoader tradeLoader;
+        auto allTrades = tradeLoader.loadTrades();
+
+        if (UseParallelPricer) {
+            ParallelPricer pricer;
+            pricer.price(allTrades, &results);
+        } else {
+            SerialPricer pricer;
+            pricer.price(allTrades, &results);
+        }
+    }
+
     ScreenResultPrinter screenPrinter;
     screenPrinter.printResults(results);
-    
+
     std::cout << "Press any key to exit.." << std::endl;
     _getch();
-    
+
     return 0;
 }

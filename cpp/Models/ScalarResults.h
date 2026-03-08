@@ -11,14 +11,14 @@
 
 class ScalarResults : public IScalarResultReceiver {
 public:
-    virtual ~ScalarResults();
+    ~ScalarResults() override;
     std::optional<ScalarResult> operator[](const std::string& tradeId) const;
 
     bool containsTrade(const std::string& tradeId) const;
 
-    virtual void addResult(const std::string& tradeId, double result) override;
+    void addResult(const std::string& tradeId, double result) override;
 
-    virtual void addError(const std::string& tradeId, const std::string& error) override;
+    void addError(const std::string& tradeId, const std::string& error) override;
 
     class Iterator {
     public:
@@ -29,15 +29,22 @@ public:
         using reference = ScalarResult&;
 
         Iterator() = default;
+        Iterator(const ScalarResults* parent,
+                 std::vector<std::string> tradeIds,
+                 std::size_t index);
 
-        // Iterator must be constructable from ScalarResults parent
         Iterator& operator++();
         ScalarResult operator*() const;
         bool operator!=(const Iterator& other) const;
+
+    private:
+        const ScalarResults* parent_ = nullptr;
+        std::vector<std::string> tradeIds_;
+        std::size_t index_ = 0;
     };
 
-    Iterator begin() const;
-    Iterator end() const;
+    [[nodiscard]] Iterator begin() const;
+    [[nodiscard]] Iterator end() const;
 
 private:
     std::map<std::string, double> results_;

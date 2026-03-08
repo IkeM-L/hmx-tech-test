@@ -3,21 +3,24 @@
 
 #include "ITradeLoader.h"
 #include "../Models/BondTrade.h"
-#include "../Models/BondTradeList.h"
+
+#include <functional>
 #include <string>
 #include <vector>
 
-class BondTradeLoader : public ITradeLoader {
+class BondTradeLoader : public ITradeLoader
+{
 private:
     static constexpr char separator = ',';
     std::string dataFile_;
 
-    BondTrade* createTradeFromLine(const std::string& line);
-    void loadTradesFromFile(const std::string& filename, BondTradeList& tradeList);
+    static BondTrade* createTradeFromLine(const std::string& line);
+    void forEachTrade(const std::function<void(ITrade*)>& tradeHandler) const;
 
 public:
     std::vector<ITrade*> loadTrades() override;
-    std::string getDataFile() const override;
+    void streamTrades(const std::function<void(ITrade*)>& tradeHandler) override;
+    [[nodiscard]] std::string getDataFile() const override;
     void setDataFile(const std::string& file) override;
 };
 
