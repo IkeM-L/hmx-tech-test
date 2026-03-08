@@ -81,6 +81,8 @@ ScalarResults::Iterator ScalarResults::begin() const {
         uniqueTradeIds.insert(fst);
     }
 
+    // The iterator walks a stable snapshot so range-based for loops are not tied
+    // to whichever backing map currently contains a given trade ID.
     std::vector tradeIds(uniqueTradeIds.begin(), uniqueTradeIds.end());
     return Iterator(this, std::move(tradeIds), 0);
 }
@@ -96,6 +98,8 @@ ScalarResults::Iterator ScalarResults::end() const {
         uniqueTradeIds.insert(fst);
     }
 
+    // Rebuild the same snapshot for the sentinel so `begin()`/`end()` compare
+    // against the same ordered set of trade IDs.
     std::vector tradeIds(uniqueTradeIds.begin(), uniqueTradeIds.end());
     return Iterator(this, std::move(tradeIds), tradeIds.size());
 }

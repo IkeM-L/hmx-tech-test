@@ -33,9 +33,9 @@ int _getch() {
 namespace
 {
     // Set to true to use StreamingTradeLoader.
-    constexpr bool UseStreamingTradeLoader = true;
+    constexpr bool UseStreamingTradeLoader = false;
 
-    // If true, uses ParallelPricer. Otherwise uses SerialPricer.
+    // If true, uses ParallelPricer. Otherwise, uses SerialPricer.
     constexpr bool UseParallelPricer = true;
 }
 
@@ -43,14 +43,12 @@ int main(int argc, char* argv[]) {
     ScalarResults results;
 
     if (UseStreamingTradeLoader) {
-        StreamingTradeLoader tradeLoader;
-
         if (UseParallelPricer) {
             ParallelPricer pricer;
             pricer.start(&results);
             try {
-                tradeLoader.streamTrades([&pricer](ITrade* trade) {
-                    pricer.submit(trade);
+                StreamingTradeLoader::streamTrades([&pricer](std::unique_ptr<ITrade> trade) {
+                    pricer.submit(std::move(trade));
                 });
             } catch (...) {
                 pricer.finish();
@@ -59,9 +57,8 @@ int main(int argc, char* argv[]) {
             pricer.finish();
         } else {
             SerialPricer pricer;
-            tradeLoader.streamTrades([&pricer, &results](ITrade* trade) {
-                std::unique_ptr<ITrade> tradeOwner(trade);
-                pricer.price({{tradeOwner.get()}}, &results);
+            StreamingTradeLoader::streamTrades([&pricer, &results](std::unique_ptr<ITrade> trade) {
+                pricer.price({{trade.get()}}, &results);
             });
         }
     } else {

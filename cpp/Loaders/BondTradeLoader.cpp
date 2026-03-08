@@ -20,7 +20,7 @@ namespace
     }
 }
 
-BondTrade* BondTradeLoader::createTradeFromLine(const std::string& line)
+std::unique_ptr<BondTrade> BondTradeLoader::createTradeFromLine(const std::string& line)
 {
     const std::vector<std::string> items = TradeParsingUtils::splitLine(line, separator);
 
@@ -42,10 +42,11 @@ BondTrade* BondTradeLoader::createTradeFromLine(const std::string& line)
     trade->setNotional(std::stod(items[4]));
     trade->setRate(std::stod(items[5]));
 
-    return trade.release();
+    return trade;
 }
 
-void BondTradeLoader::forEachTrade(const std::function<void(ITrade*)>& tradeHandler) const
+void BondTradeLoader::forEachTrade(
+    const std::function<void(std::unique_ptr<ITrade>)>& tradeHandler) const
 {
     TradeParsingUtils::validateFileNotEmpty(dataFile_);
 
@@ -82,15 +83,16 @@ std::vector<ITrade*> BondTradeLoader::loadTrades()
 {
     std::vector<ITrade*> result;
 
-    forEachTrade([&result](ITrade* trade)
+    forEachTrade([&result](std::unique_ptr<ITrade> trade)
     {
-        result.push_back(trade);
+        result.push_back(trade.release());
     });
 
     return result;
 }
 
-void BondTradeLoader::streamTrades(const std::function<void(ITrade*)>& tradeHandler)
+void BondTradeLoader::streamTrades(
+    const std::function<void(std::unique_ptr<ITrade>)>& tradeHandler)
 {
     forEachTrade(tradeHandler);
 }

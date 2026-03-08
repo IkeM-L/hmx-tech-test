@@ -15,7 +15,9 @@ private:
     void loadPricers();
     
 public:
+    /// Destroys the pricer and releases owned pricing engines.
     ~SerialPricer();
+    /// Prices each trade sequentially using the configured pricing engines.
     void price(const std::vector<std::vector<ITrade*>>& tradeContainers, 
                IScalarResultReceiver* resultReceiver);
 };

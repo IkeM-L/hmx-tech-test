@@ -14,13 +14,20 @@ private:
     static constexpr char separator = ',';
     std::string dataFile_;
 
-    static BondTrade* createTradeFromLine(const std::string& line);
-    void forEachTrade(const std::function<void(ITrade*)>& tradeHandler) const;
+    static std::unique_ptr<BondTrade> createTradeFromLine(const std::string& line);
+    void forEachTrade(const std::function<void(std::unique_ptr<ITrade>)>& tradeHandler) const;
 
 public:
+    /// Loads the full bond trade file into memory.
     std::vector<ITrade*> loadTrades() override;
-    void streamTrades(const std::function<void(ITrade*)>& tradeHandler) override;
+
+    /// Streams bond trades one at a time to the supplied callback.
+    void streamTrades(const std::function<void(std::unique_ptr<ITrade>)>& tradeHandler) override;
+
+    /// Returns the configured bond trade file path.
     [[nodiscard]] std::string getDataFile() const override;
+
+    /// Sets the bond trade file path.
     void setDataFile(const std::string& file) override;
 };
 

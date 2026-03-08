@@ -19,7 +19,8 @@ std::vector<std::unique_ptr<ITradeLoader>> StreamingTradeLoader::getTradeLoaders
     return loaders;
 }
 
-void StreamingTradeLoader::streamTrades(const std::function<void(ITrade*)>& tradeHandler) {
+void StreamingTradeLoader::streamTrades(
+    const std::function<void(std::unique_ptr<ITrade>)>& tradeHandler) {
     const auto loaders = getTradeLoaders();
     for (const auto& loader : loaders) {
         loader->streamTrades(tradeHandler);

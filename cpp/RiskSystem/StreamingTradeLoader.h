@@ -11,7 +11,8 @@ private:
     static std::vector<std::unique_ptr<ITradeLoader>> getTradeLoaders();
     
 public:
-    static void streamTrades(const std::function<void(ITrade*)>& tradeHandler);
+    /// Streams trades from all configured sources, transferring ownership to the callback.
+    static void streamTrades(const std::function<void(std::unique_ptr<ITrade>)>& tradeHandler);
 };
 
 #endif // STREAMINGTRADELOADER_H

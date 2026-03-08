@@ -6,7 +6,9 @@
 #include <stdexcept>
 #include <vector>
 
-FxTrade* FxTradeLoader::createTradeFromLine(const std::string& line, int lineNumber)
+std::unique_ptr<FxTrade> FxTradeLoader::createTradeFromLine(
+    const std::string& line,
+    const int lineNumber)
 {
     const std::vector<std::string> items = TradeParsingUtils::splitLine(line, u8"¬");
 
@@ -31,10 +33,11 @@ FxTrade* FxTradeLoader::createTradeFromLine(const std::string& line, int lineNum
     trade->setValueDate(TradeParsingUtils::parseDate(items[6]));
     trade->setCounterparty(items[7]);
 
-    return trade.release();
+    return trade;
 }
 
-void FxTradeLoader::forEachTrade(const std::function<void(ITrade*)>& tradeHandler) const
+void FxTradeLoader::forEachTrade(
+    const std::function<void(std::unique_ptr<ITrade>)>& tradeHandler) const
 {
     TradeParsingUtils::validateFileNotEmpty(dataFile_);
 
@@ -75,15 +78,16 @@ std::vector<ITrade*> FxTradeLoader::loadTrades()
 {
     std::vector<ITrade*> result;
 
-    forEachTrade([&result](ITrade* trade)
+    forEachTrade([&result](std::unique_ptr<ITrade> trade)
     {
-        result.push_back(trade);
+        result.push_back(trade.release());
     });
 
     return result;
 }
 
-void FxTradeLoader::streamTrades(const std::function<void(ITrade*)>& tradeHandler)
+void FxTradeLoader::streamTrades(
+    const std::function<void(std::unique_ptr<ITrade>)>& tradeHandler)
 {
     forEachTrade(tradeHandler);
 }

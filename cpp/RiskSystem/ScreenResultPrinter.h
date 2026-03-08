@@ -5,6 +5,7 @@
 
 class ScreenResultPrinter {
 public:
+    /// Prints one output line per trade result.
     static void printResults(const ScalarResults& results);
 };
 

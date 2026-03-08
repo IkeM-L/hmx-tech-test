@@ -32,6 +32,8 @@ void ParallelPricer::loadPricers(const std::size_t workerCount)
         workerPricers_.reserve(workerCount);
         for (std::size_t i = 0; i < workerCount; ++i)
         {
+            // Pricing engines are not designed as shared thread-safe objects, so
+            // each worker gets its own set and can price independently.
             workerPricers_.push_back(PricingEngineFactory::createPricersFromConfig(pricerConfig_));
         }
     }
@@ -88,12 +90,12 @@ void ParallelPricer::start(IScalarResultReceiver* resultReceiver)
     }
 }
 
-void ParallelPricer::submit(ITrade* trade)
+void ParallelPricer::submit(std::unique_ptr<ITrade> trade)
 {
-    enqueueTrade(trade, true);
+    enqueueTrade(std::move(trade));
 }
 
-void ParallelPricer::enqueueTrade(ITrade* trade, const bool deleteAfterPricing)
+void ParallelPricer::enqueueTrade(std::unique_ptr<ITrade> trade)
 {
     if (trade == nullptr)
     {
@@ -111,7 +113,31 @@ void ParallelPricer::enqueueTrade(ITrade* trade, const bool deleteAfterPricing)
         throw std::logic_error("ParallelPricer is not running");
     }
 
-    queue_.push_back(QueuedTrade{trade, deleteAfterPricing});
+    queue_.push_back(QueuedTrade{std::move(trade), nullptr});
+
+    lock.unlock();
+    queueNotEmpty_.notify_one();
+}
+
+void ParallelPricer::enqueueTrade(ITrade* trade)
+{
+    if (trade == nullptr)
+    {
+        throw std::invalid_argument("trade");
+    }
+
+    std::unique_lock lock(queueMutex_);
+    queueNotFull_.wait(lock, [this]()
+    {
+        return !acceptingTrades_ || queue_.size() < queueCapacity_;
+    });
+
+    if (!acceptingTrades_)
+    {
+        throw std::logic_error("ParallelPricer is not running");
+    }
+
+    queue_.push_back(QueuedTrade{nullptr, trade});
 
     lock.unlock();
     queueNotEmpty_.notify_one();
@@ -119,6 +145,8 @@ void ParallelPricer::enqueueTrade(ITrade* trade, const bool deleteAfterPricing)
 
 void ParallelPricer::workerLoop(const std::size_t workerIndex)
 {
+    // Used inside exception paths
+    // ReSharper disable once CppDFAUnusedValue
     auto recordFatalError = [this](const std::exception_ptr& exPtr)
     {
         std::lock_guard lock(fatalErrorMutex_);
@@ -148,24 +176,22 @@ void ParallelPricer::workerLoop(const std::size_t workerIndex)
                 continue;
             }
 
-            queuedTrade = queue_.front();
+            // Move the queue entry out under the lock, then do the expensive work
+            // after releasing it so producers and other workers can keep progressing.
+            queuedTrade = std::move(queue_.front());
             queue_.pop_front();
         }
 
         queueNotFull_.notify_one();
 
-        std::unique_ptr<ITrade> ownedTrade;
-        ITrade* trade = queuedTrade.trade;
-        if (queuedTrade.deleteAfterPricing)
-        {
-            ownedTrade.reset(trade);
-        }
+        ITrade* trade = queuedTrade.get();
 
         if (trade == nullptr)
         {
             continue;
         }
 
+        // Each worker indexes into its own pricer map to avoid sharing engine state.
         auto& pricers = workerPricers_[workerIndex];
 
         try
@@ -234,12 +260,10 @@ void ParallelPricer::shutdown(const bool rethrowFatalError)
 
     while (!queue_.empty())
     {
-        const auto queuedTrade = queue_.front();
+        // Any remaining streamed trades are still owned by the queue entry and
+        // will be released here when the moved-from local goes out of scope.
+        auto queuedTrade = std::move(queue_.front());
         queue_.pop_front();
-        if (queuedTrade.deleteAfterPricing)
-        {
-            delete queuedTrade.trade;
-        }
     }
 
     lockedReceiver_.reset();
@@ -264,7 +288,7 @@ void ParallelPricer::price(const std::vector<std::vector<ITrade*>>& tradeContain
         {
             for (ITrade* trade : tradeContainer)
             {
-                enqueueTrade(trade, false);
+                enqueueTrade(trade);
             }
         }
     }

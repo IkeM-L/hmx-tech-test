@@ -42,8 +42,15 @@ private:
     };
 
     struct QueuedTrade {
-        ITrade* trade = nullptr;
-        bool deleteAfterPricing = false;
+        // A queue entry can either own a streamed trade or borrow one from the
+        // batch pricing path, which keeps the queue logic shared across both modes.
+        std::unique_ptr<ITrade> ownedTrade;
+        ITrade* borrowedTrade = nullptr;
+
+        ITrade* get() const
+        {
+            return ownedTrade ? ownedTrade.get() : borrowedTrade;
+        }
     };
 
     PricingEngineConfig pricerConfig_;
@@ -62,15 +69,24 @@ private:
     void loadPricers(std::size_t workerCount);
     void clearWorkerPricers();
     void workerLoop(std::size_t workerIndex);
-    void enqueueTrade(ITrade* trade, bool deleteAfterPricing);
+    void enqueueTrade(std::unique_ptr<ITrade> trade);
+    void enqueueTrade(ITrade* trade);
     void shutdown(bool rethrowFatalError);
     
 public:
+    /// Stops worker threads and releases any owned pricing engines.
     ~ParallelPricer();
 
+    /// Starts worker threads and prepares the pricer to receive streamed trades.
     void start(IScalarResultReceiver* resultReceiver);
-    void submit(ITrade* trade);
+
+    /// Submits a streamed trade and transfers ownership to the pricer.
+    void submit(std::unique_ptr<ITrade> trade);
+
+    /// Waits for all queued trades to finish processing.
     void finish();
+
+    /// Prices the supplied in-memory trade containers and returns when complete.
     void price(const std::vector<std::vector<ITrade*>>& tradeContainers,
                IScalarResultReceiver* resultReceiver);
 };
