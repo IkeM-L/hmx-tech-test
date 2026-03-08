@@ -24,7 +24,7 @@ std::unique_ptr<FxTrade> FxTradeLoader::createTradeFromLine(
     const std::string& line,
     const int lineNumber)
 {
-    const std::vector<std::string> items = TradeParsingUtils::splitLine(line, u8"¬");
+    const std::vector<std::string> items = TradeParsingUtils::splitLine(line, "¬");
 
     if (items.size() != 9)
     {

@@ -17,7 +17,9 @@ private:
     void forEachTrade(const std::function<void(std::unique_ptr<ITrade>)>& tradeHandler) const;
 
 public:
-    /// Loads the full FX trade file into memory.
+    /// Legacy batch API kept because the current FX-loader tests still use it.
+    /// Once the tests are updated, this should either return `std::unique_ptr`
+    /// ownership or be removed entirely.
     std::vector<ITrade*> loadTrades() override;
 
     /// Streams FX trades one at a time to the supplied callback.

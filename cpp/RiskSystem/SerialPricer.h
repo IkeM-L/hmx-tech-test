@@ -6,6 +6,7 @@
 #include "../Models/IScalarResultReceiver.h"
 #include "PricingConfigLoader.h"
 #include <map>
+#include <memory>
 #include <vector>
 #include <string>
 
@@ -17,8 +18,8 @@ private:
 public:
     /// Destroys the pricer and releases owned pricing engines.
     ~SerialPricer();
-    /// Prices each trade sequentially using the configured pricing engines.
-    void price(const std::vector<std::vector<ITrade*>>& tradeContainers, 
+    /// Prices owned trade containers sequentially without taking ownership from the caller.
+    void price(const std::vector<std::vector<std::unique_ptr<ITrade>>>& tradeContainers,
                IScalarResultReceiver* resultReceiver);
 };
 

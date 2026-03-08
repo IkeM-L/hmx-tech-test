@@ -32,27 +32,31 @@ public:
         using iterator_category = std::forward_iterator_tag;
         using value_type = ScalarResult;
         using difference_type = std::ptrdiff_t;
-        using pointer = ScalarResult*;
-        using reference = ScalarResult&;
+        using pointer = const ScalarResult*;
+        using reference = const ScalarResult&;
 
         /// Creates a default end iterator.
         Iterator() = default;
 
-        /// Creates an iterator over a snapshot of trade IDs.
+        /// Creates an iterator over an immutable snapshot of results.
         Iterator(const ScalarResults* parent,
-                 std::shared_ptr<const std::vector<std::string>> tradeIds,
+                 std::shared_ptr<const std::vector<ScalarResult>> snapshot,
                  std::size_t index);
 
         /// Advances the iterator to the next result.
         Iterator& operator++();
         /// Returns the current scalar result.
-        ScalarResult operator*() const;
+        reference operator*() const;
+        /// Returns the current scalar result pointer.
+        pointer operator->() const;
+        /// Compares two iterators for equality.
+        bool operator==(const Iterator& other) const;
         /// Compares two iterators for inequality.
         bool operator!=(const Iterator& other) const;
 
     private:
         const ScalarResults* parent_ = nullptr;
-        std::shared_ptr<const std::vector<std::string>> tradeIds_;
+        std::shared_ptr<const std::vector<ScalarResult>> snapshot_;
         std::size_t index_ = 0;
     };
 
@@ -62,7 +66,7 @@ public:
     [[nodiscard]] Iterator end() const;
 
 private:
-    [[nodiscard]] std::shared_ptr<const std::vector<std::string>> buildTradeIdSnapshot() const;
+    [[nodiscard]] std::shared_ptr<const std::vector<ScalarResult>> buildSnapshot() const;
 
     std::map<std::string, double> results_;
     std::map<std::string, std::string> errors_;

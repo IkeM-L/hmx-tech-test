@@ -1,6 +1,6 @@
 #include "ScalarResults.h"
 
-#include <set>
+#include <map>
 #include <stdexcept>
 
 ScalarResults::~ScalarResults() = default;
@@ -36,60 +36,76 @@ void ScalarResults::addError(const std::string& tradeId, const std::string& erro
     errors_[tradeId] = error;
 }
 
-ScalarResults::Iterator::Iterator(const ScalarResults* parent, std::shared_ptr<const std::vector<std::string>> tradeIds, const std::size_t index)
-    : parent_(parent), tradeIds_(std::move(tradeIds)), index_(index) {
+ScalarResults::Iterator::Iterator(
+    const ScalarResults* parent,
+    std::shared_ptr<const std::vector<ScalarResult>> snapshot,
+    const std::size_t index)
+    : parent_(parent), snapshot_(std::move(snapshot)), index_(index) {
 }
 
 ScalarResults::Iterator& ScalarResults::Iterator::operator++() {
-    if (tradeIds_ != nullptr && index_ < tradeIds_->size()) {
+    if (snapshot_ != nullptr && index_ < snapshot_->size()) {
         ++index_;
     }
     return *this;
 }
 
-ScalarResult ScalarResults::Iterator::operator*() const {
-    if (parent_ == nullptr || tradeIds_ == nullptr || index_ >= tradeIds_->size()) {
+ScalarResults::Iterator::reference ScalarResults::Iterator::operator*() const {
+    if (parent_ == nullptr || snapshot_ == nullptr || index_ >= snapshot_->size()) {
         throw std::out_of_range("Iterator cannot be dereferenced");
     }
 
-    const std::string& tradeId = (*tradeIds_)[index_];
-    std::optional<ScalarResult> result = (*parent_)[tradeId];
+    return (*snapshot_)[index_];
+}
 
-    if (!result.has_value()) {
-        throw std::runtime_error("Iterator points to invalid trade ID");
+ScalarResults::Iterator::pointer ScalarResults::Iterator::operator->() const {
+    if (parent_ == nullptr || snapshot_ == nullptr || index_ >= snapshot_->size()) {
+        throw std::out_of_range("Iterator cannot be dereferenced");
     }
 
-    return *result;
+    return &(*snapshot_)[index_];
+}
+
+bool ScalarResults::Iterator::operator==(const Iterator& other) const {
+    const bool thisIsEnd = snapshot_ == nullptr || index_ >= snapshot_->size();
+    const bool otherIsEnd = other.snapshot_ == nullptr || other.index_ >= other.snapshot_->size();
+
+    if (thisIsEnd || otherIsEnd) {
+        return thisIsEnd == otherIsEnd;
+    }
+
+    return parent_ == other.parent_ && index_ == other.index_;
 }
 
 bool ScalarResults::Iterator::operator!=(const Iterator& other) const {
-    if (other.parent_ == nullptr && other.tradeIds_ == nullptr) {
-        return parent_ != nullptr && tradeIds_ != nullptr && index_ < tradeIds_->size();
-    }
-
-    return parent_ != other.parent_ ||
-           index_ != other.index_ ||
-           tradeIds_ != other.tradeIds_;
+    return !(*this == other);
 }
 
-std::shared_ptr<const std::vector<std::string>> ScalarResults::buildTradeIdSnapshot() const {
-    std::set<std::string> uniqueTradeIds;
+std::shared_ptr<const std::vector<ScalarResult>> ScalarResults::buildSnapshot() const {
+    std::map<std::string, std::pair<std::optional<double>, std::optional<std::string>>> mergedResults;
 
     for (const auto& [fst, snd] : results_) {
-        uniqueTradeIds.insert(fst);
+        mergedResults[fst].first = snd;
     }
 
     for (const auto& [fst, snd] : errors_) {
-        uniqueTradeIds.insert(fst);
+        mergedResults[fst].second = snd;
     }
 
-    return std::make_shared<const std::vector<std::string>>(uniqueTradeIds.begin(), uniqueTradeIds.end());
+    std::vector<ScalarResult> snapshot;
+    snapshot.reserve(mergedResults.size());
+
+    for (const auto& [tradeId, resultData] : mergedResults) {
+        snapshot.emplace_back(tradeId, resultData.first, resultData.second);
+    }
+
+    return std::make_shared<const std::vector<ScalarResult>>(std::move(snapshot));
 }
 
 ScalarResults::Iterator ScalarResults::begin() const {
-    // The iterator walks a stable snapshot so range-based for loops are not tied
-    // to whichever backing map currently contains a given trade ID.
-    return Iterator(this, buildTradeIdSnapshot(), 0);
+    // The iterator walks an immutable snapshot so copied iterators remain valid
+    // and comparisons are based on logical position rather than snapshot identity.
+    return Iterator(this, buildSnapshot(), 0);
 }
 
 ScalarResults::Iterator ScalarResults::end() const {

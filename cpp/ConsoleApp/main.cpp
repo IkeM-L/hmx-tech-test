@@ -33,7 +33,7 @@ int _getch() {
 namespace
 {
     // Set to true to use StreamingTradeLoader.
-    constexpr bool UseStreamingTradeLoader = false;
+    constexpr bool UseStreamingTradeLoader = true;
 
     // If true, uses ParallelPricer. Otherwise, uses SerialPricer.
     constexpr bool UseParallelPricer = true;
@@ -58,7 +58,10 @@ int main(int argc, char* argv[]) {
         } else {
             SerialPricer pricer;
             StreamingTradeLoader::streamTrades([&pricer, &results](std::unique_ptr<ITrade> trade) {
-                pricer.price({{trade.get()}}, &results);
+                std::vector<std::vector<std::unique_ptr<ITrade>>> tradeBatch;
+                tradeBatch.emplace_back();
+                tradeBatch.back().push_back(std::move(trade));
+                pricer.price(tradeBatch, &results);
             });
         }
     } else {

@@ -119,13 +119,8 @@ void ParallelPricer::enqueueTrade(std::unique_ptr<ITrade> trade)
     queueNotEmpty_.notify_one();
 }
 
-void ParallelPricer::enqueueTrade(ITrade* trade)
+void ParallelPricer::enqueueBorrowedTrade(ITrade& trade)
 {
-    if (trade == nullptr)
-    {
-        throw std::invalid_argument("trade");
-    }
-
     std::unique_lock lock(queueMutex_);
     queueNotFull_.wait(lock, [this]()
     {
@@ -137,7 +132,7 @@ void ParallelPricer::enqueueTrade(ITrade* trade)
         throw std::logic_error("ParallelPricer is not running");
     }
 
-    queue_.push_back(QueuedTrade{nullptr, trade});
+    queue_.push_back(QueuedTrade{nullptr, &trade});
 
     lock.unlock();
     queueNotEmpty_.notify_one();
@@ -277,7 +272,7 @@ void ParallelPricer::shutdown(const bool rethrowFatalError)
     }
 }
 
-void ParallelPricer::price(const std::vector<std::vector<ITrade*>>& tradeContainers,
+void ParallelPricer::price(const std::vector<std::vector<std::unique_ptr<ITrade>>>& tradeContainers,
                            IScalarResultReceiver* resultReceiver)
 {
     start(resultReceiver);
@@ -286,9 +281,9 @@ void ParallelPricer::price(const std::vector<std::vector<ITrade*>>& tradeContain
     {
         for (const auto& tradeContainer : tradeContainers)
         {
-            for (ITrade* trade : tradeContainer)
+            for (const auto& trade : tradeContainer)
             {
-                enqueueTrade(trade);
+                enqueueBorrowedTrade(*trade);
             }
         }
     }

@@ -5,6 +5,7 @@
 #include "../Pricers/FxPricingEngine.h"
 #include "PricingConfigLoader.h"
 
+#include <memory>
 #include <stdexcept>
 
 IPricingEngine* PricingEngineFactory::createPricingEngine(const std::string& typeName)
@@ -37,14 +38,18 @@ std::map<std::string, IPricingEngine*> PricingEngineFactory::createPricersFromCo
         {
             const std::string& tradeType = configItem.getTradeType();
             const std::string& typeName = configItem.getTypeName();
+            auto replacement = std::unique_ptr<IPricingEngine>(createPricingEngine(typeName));
 
             auto existing = pricers.find(tradeType);
             if (existing != pricers.end())
             {
                 delete existing->second;
+                existing->second = replacement.release();
             }
-
-            pricers[tradeType] = createPricingEngine(typeName);
+            else
+            {
+                pricers.emplace(tradeType, replacement.release());
+            }
         }
     }
     catch (...)

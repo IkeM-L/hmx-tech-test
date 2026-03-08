@@ -70,7 +70,7 @@ private:
     void clearWorkerPricers();
     void workerLoop(std::size_t workerIndex);
     void enqueueTrade(std::unique_ptr<ITrade> trade);
-    void enqueueTrade(ITrade* trade);
+    void enqueueBorrowedTrade(ITrade& trade);
     void shutdown(bool rethrowFatalError);
     
 public:
@@ -86,8 +86,8 @@ public:
     /// Waits for all queued trades to finish processing.
     void finish();
 
-    /// Prices the supplied in-memory trade containers and returns when complete.
-    void price(const std::vector<std::vector<ITrade*>>& tradeContainers,
+    /// Prices owned trade containers in parallel without taking ownership from the caller.
+    void price(const std::vector<std::vector<std::unique_ptr<ITrade>>>& tradeContainers,
                IScalarResultReceiver* resultReceiver);
 };
 

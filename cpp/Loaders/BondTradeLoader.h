@@ -18,7 +18,9 @@ private:
     void forEachTrade(const std::function<void(std::unique_ptr<ITrade>)>& tradeHandler) const;
 
 public:
-    /// Loads the full bond trade file into memory.
+    /// Legacy batch API kept because the current bond-loader tests still use it.
+    /// Once the tests are updated, this should either return `std::unique_ptr`
+    /// ownership or be removed entirely.
     std::vector<ITrade*> loadTrades() override;
 
     /// Streams bond trades one at a time to the supplied callback.

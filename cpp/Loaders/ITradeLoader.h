@@ -12,7 +12,10 @@ public:
     /// Destroys the loader instance.
     virtual ~ITradeLoader() = default;
 
-    /// Loads all trades into memory and returns raw pointers owned by the caller.
+    /// Legacy batch API kept for the existing loader tests.
+    /// Prefer `streamTrades` or an owning wrapper such as `SerialTradeLoader`.
+    /// Once the tests are updated, this should either move to `std::unique_ptr`
+    /// ownership or be removed entirely.
     virtual std::vector<ITrade*> loadTrades() = 0;
 
     /// Streams trades one at a time, transferring ownership to the callback.

@@ -18,12 +18,12 @@ void SerialPricer::loadPricers() {
     pricers_ = PricingEngineFactory::createPricersFromConfigFile("./PricingConfig/PricingEngines.xml");
 }
 
-void SerialPricer::price(const std::vector<std::vector<ITrade*>>& tradeContainers,
+void SerialPricer::price(const std::vector<std::vector<std::unique_ptr<ITrade>>>& tradeContainers,
                          IScalarResultReceiver* resultReceiver) {
     loadPricers();
 
     for (const auto& tradeContainer : tradeContainers) {
-        for (ITrade* trade : tradeContainer) {
+        for (const auto& trade : tradeContainer) {
             std::string tradeType = trade->getTradeType();
             if (pricers_.find(tradeType) == pricers_.end()) {
                 resultReceiver->addError(trade->getTradeId(), "No Pricing Engines available for this trade type");
@@ -31,7 +31,7 @@ void SerialPricer::price(const std::vector<std::vector<ITrade*>>& tradeContainer
             }
 
             IPricingEngine* pricer = pricers_[tradeType];
-            pricer->price(trade, resultReceiver);
+            pricer->price(trade.get(), resultReceiver);
         }
     }
 }
