@@ -33,7 +33,7 @@ int _getch() {
 namespace
 {
     // Set to true to use StreamingTradeLoader.
-    constexpr bool UseStreamingTradeLoader = true;
+    constexpr bool UseStreamingTradeLoader = false;
 
     // If true, uses ParallelPricer. Otherwise, uses SerialPricer.
     constexpr bool UseParallelPricer = true;

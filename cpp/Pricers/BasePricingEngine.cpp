@@ -3,6 +3,7 @@
 #include <thread>
 #include <chrono>
 #include <iostream>
+#include <mutex>
 #include <stdexcept>
 #include <limits>
 
@@ -55,12 +56,12 @@ void BasePricingEngine::priceTrade(ITrade* trade, IScalarResultReceiver* resultR
     auto& tradesToError = getTradesToError();
     auto& tradesToWarn = getTradesToWarn();
     
-    if (tradesToError.find(tradeId) != tradesToError.end()) {
-        resultReceiver->addError(tradeId, tradesToError[tradeId]);
+    if (const auto errorIt = tradesToError.find(tradeId); errorIt != tradesToError.end()) {
+        resultReceiver->addError(tradeId, errorIt->second);
     } else {
         resultReceiver->addResult(tradeId, result);
-        if (tradesToWarn.find(tradeId) != tradesToWarn.end()) {
-            resultReceiver->addError(tradeId, tradesToWarn[tradeId]);
+        if (const auto warningIt = tradesToWarn.find(tradeId); warningIt != tradesToWarn.end()) {
+            resultReceiver->addError(tradeId, warningIt->second);
         }
     }
     
@@ -78,23 +79,20 @@ double BasePricingEngine::Random::nextDouble() {
     return static_cast<double>(dist_(gen_)) / static_cast<double>(std::numeric_limits<unsigned int>::max());
 }
 
-std::map<std::string, std::string>& BasePricingEngine::getTradesToError() {
+const std::map<std::string, std::string>& BasePricingEngine::getTradesToError() {
     static std::map<std::string, std::string> tradesToError;
-    static bool initialized = false;
-    if (!initialized) {
+    static std::once_flag initialized;
+    std::call_once(initialized, []() {
         tradesToError["GOV006"] = "Undefined error in pricing";
-        initialized = true;
-    }
+    });
     return tradesToError;
 }
 
-std::map<std::string, std::string>& BasePricingEngine::getTradesToWarn() {
+const std::map<std::string, std::string>& BasePricingEngine::getTradesToWarn() {
     static std::map<std::string, std::string> tradesToWarn;
-    static bool initialized = false;
-    if (!initialized) {
+    static std::once_flag initialized;
+    std::call_once(initialized, []() {
         tradesToWarn["FWD001"] = "Unable to calibrate model to value date";
-        initialized = true;
-    }
+    });
     return tradesToWarn;
 }
-

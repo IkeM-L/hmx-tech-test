@@ -8,10 +8,22 @@
 class TradeList : public ITradeReceiver {
 public:
     TradeList() = default;
+    ~TradeList() override
+    {
+        for (const ITrade* trade : trades_)
+        {
+            delete trade;
+        }
+    }
+
+    TradeList(const TradeList&) = delete;
+    TradeList& operator=(const TradeList&) = delete;
+    TradeList(TradeList&&) = default;
+    TradeList& operator=(TradeList&&) = default;
     
-    /// Legacy test helper that stores borrowed raw pointers from loader tests.
+    /// Legacy test helper that takes ownership of raw pointers from loader tests.
     /// Once the tests are updated, this should either own `std::unique_ptr`
-    /// trades or be removed entirely.
+    /// trades directly or be removed entirely.
     void add(ITrade* trade) override {
         trades_.push_back(trade);
     }

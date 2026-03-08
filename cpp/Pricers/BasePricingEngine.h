@@ -5,8 +5,8 @@
 #include "../Models/ITrade.h"
 #include "../Models/IScalarResultReceiver.h"
 #include <map>
-#include <string>
 #include <random>
+#include <string>
 
 class BasePricingEngine : public IPricingEngine {
 protected:
@@ -41,8 +41,8 @@ private:
     
     Random random_;
     
-    static std::map<std::string, std::string>& getTradesToError();
-    static std::map<std::string, std::string>& getTradesToWarn();
+    static const std::map<std::string, std::string>& getTradesToError();
+    static const std::map<std::string, std::string>& getTradesToWarn();
 };
 
 #endif // BASEPRICINGENGINE_H
