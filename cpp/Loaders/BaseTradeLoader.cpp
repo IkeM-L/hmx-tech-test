@@ -35,13 +35,19 @@ void BaseTradeLoader::skipBom(std::string& line)
 
 std::vector<ITrade*> BaseTradeLoader::loadTrades()
 {
-    std::vector<ITrade*> result;
+    std::vector<std::unique_ptr<ITrade>> ownedTrades;
 
-    forEachTrade([&result](std::unique_ptr<ITrade> trade)
+    forEachTrade([&ownedTrades](std::unique_ptr<ITrade> trade)
     {
-        result.push_back(trade.release());
+        ownedTrades.push_back(std::move(trade));
     });
 
+    std::vector<ITrade*> result;
+    result.reserve(ownedTrades.size());
+    for (auto& trade : ownedTrades)
+    {
+        result.push_back(trade.release());
+    }
     return result;
 }
 

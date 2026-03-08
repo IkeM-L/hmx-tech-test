@@ -4,6 +4,7 @@
 #include "../Models/IPricingEngine.h"
 #include "../Models/ITrade.h"
 #include "../Models/IScalarResultReceiver.h"
+#include "PricingEngineFactory.h"
 #include "PricingEngineConfig.h"
 #include <condition_variable>
 #include <deque>
@@ -54,7 +55,7 @@ private:
     };
 
     PricingEngineConfig pricerConfig_;
-    std::vector<std::map<std::string, IPricingEngine*>> workerPricers_;
+    std::vector<PricingEngineFactory::PricingEngineMap> workerPricers_;
     std::unique_ptr<LockedScalarResultReceiver> lockedReceiver_;
     std::deque<QueuedTrade> queue_;
     std::vector<std::thread> workerThreads_;

@@ -5,6 +5,7 @@
 #include "../Models/ITrade.h"
 #include "../Models/IScalarResultReceiver.h"
 #include "PricingConfigLoader.h"
+#include "PricingEngineFactory.h"
 #include <map>
 #include <memory>
 #include <vector>
@@ -12,12 +13,12 @@
 
 class SerialPricer {
 private:
-    std::map<std::string, IPricingEngine*> pricers_;
+    PricingEngineFactory::PricingEngineMap pricers_;
     void loadPricers();
     
 public:
     /// Destroys the pricer and releases owned pricing engines.
-    ~SerialPricer();
+    ~SerialPricer() = default;
     /// Prices owned trade containers sequentially without taking ownership from the caller.
     void price(const std::vector<std::vector<std::unique_ptr<ITrade>>>& tradeContainers,
                IScalarResultReceiver* resultReceiver);

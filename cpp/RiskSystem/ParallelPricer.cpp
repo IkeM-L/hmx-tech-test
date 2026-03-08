@@ -46,14 +46,6 @@ void ParallelPricer::loadPricers(const std::size_t workerCount)
 
 void ParallelPricer::clearWorkerPricers()
 {
-    for (auto& workerPricers : workerPricers_)
-    {
-        for (auto& entry : workerPricers)
-        {
-            delete entry.second;
-        }
-        workerPricers.clear();
-    }
     workerPricers_.clear();
 }
 

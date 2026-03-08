@@ -1,14 +1,6 @@
 #include "SerialPricer.h"
-#include "PricingEngineFactory.h"
 
 #include <stdexcept>
-
-SerialPricer::~SerialPricer() {
-    for (auto& entry : pricers_) {
-        delete entry.second;
-    }
-    pricers_.clear();
-}
 
 void SerialPricer::loadPricers() {
     if (!pricers_.empty()) {
@@ -30,8 +22,7 @@ void SerialPricer::price(const std::vector<std::vector<std::unique_ptr<ITrade>>>
                 continue;
             }
 
-            IPricingEngine* pricer = pricers_[tradeType];
-            pricer->price(trade.get(), resultReceiver);
+            pricers_.at(tradeType)->price(trade.get(), resultReceiver);
         }
     }
 }

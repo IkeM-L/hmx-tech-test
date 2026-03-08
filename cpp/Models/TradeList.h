@@ -3,18 +3,13 @@
 
 #include "ITrade.h"
 #include "ITradeReceiver.h"
+#include <memory>
 #include <vector>
 
 class TradeList : public ITradeReceiver {
 public:
     TradeList() = default;
-    ~TradeList() override
-    {
-        for (const ITrade* trade : trades_)
-        {
-            delete trade;
-        }
-    }
+    ~TradeList() override = default;
 
     TradeList(const TradeList&) = delete;
     TradeList& operator=(const TradeList&) = delete;
@@ -25,22 +20,67 @@ public:
     /// Once the tests are updated, this should either own `std::unique_ptr`
     /// trades directly or be removed entirely.
     void add(ITrade* trade) override {
-        trades_.push_back(trade);
+        trades_.push_back(std::unique_ptr<ITrade>(trade));
     }
     
     [[nodiscard]] size_t size() const { return trades_.size(); }
-    ITrade* operator[](size_t index) const { return trades_[index]; }
+    ITrade* operator[](size_t index) const { return trades_[index].get(); }
     
-    using iterator = std::vector<ITrade*>::iterator;
-    using const_iterator = std::vector<ITrade*>::const_iterator;
+    class iterator {
+    public:
+        using underlying_iterator = std::vector<std::unique_ptr<ITrade>>::iterator;
+        using iterator_category = std::forward_iterator_tag;
+        using value_type = ITrade*;
+        using difference_type = std::ptrdiff_t;
+        using pointer = ITrade**;
+        using reference = ITrade*&;
+
+        explicit iterator(underlying_iterator current) : current_(current) {}
+
+        iterator& operator++() {
+            ++current_;
+            return *this;
+        }
+
+        bool operator==(const iterator& other) const { return current_ == other.current_; }
+        bool operator!=(const iterator& other) const { return !(*this == other); }
+        ITrade* operator*() const { return current_->get(); }
+
+    private:
+        underlying_iterator current_;
+    };
+
+    class const_iterator {
+    public:
+        using underlying_iterator = std::vector<std::unique_ptr<ITrade>>::const_iterator;
+        using iterator_category = std::forward_iterator_tag;
+        using value_type = const ITrade*;
+        using difference_type = std::ptrdiff_t;
+        using pointer = const ITrade**;
+        using reference = const ITrade*&;
+
+        explicit const_iterator(underlying_iterator current) : current_(current) {}
+
+        const_iterator& operator++() {
+            ++current_;
+            return *this;
+        }
+
+        bool operator==(const const_iterator& other) const { return current_ == other.current_; }
+        bool operator!=(const const_iterator& other) const { return !(*this == other); }
+        const ITrade* operator*() const { return current_->get(); }
+
+    private:
+        underlying_iterator current_;
+    };
     
-    iterator begin() { return trades_.begin(); }
-    iterator end() { return trades_.end(); }
-    [[nodiscard]] const_iterator begin() const { return trades_.begin(); }
-    [[nodiscard]] const_iterator end() const { return trades_.end(); }
+    iterator begin() { return iterator(trades_.begin()); }
+    iterator end() { return iterator(trades_.end()); }
+    [[nodiscard]] const_iterator begin() const { return const_iterator(trades_.begin()); }
+    [[nodiscard]] const_iterator end() const { return const_iterator(trades_.end()); }
     
 private:
-    std::vector<ITrade*> trades_;
+    std::vector<std::unique_ptr<ITrade>> trades_;
 };
 
 #endif // TRADELIST_H
