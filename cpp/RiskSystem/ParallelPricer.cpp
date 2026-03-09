@@ -65,6 +65,7 @@ void ParallelPricer::start(IScalarResultReceiver* resultReceiver)
     firstFatalError_ = nullptr;
     queue_.clear();
 
+    // In reality, pricing would be CPU heavy so this would be a good default to prevent thrashing
     const unsigned int hardwareThreads = std::thread::hardware_concurrency();
     const std::size_t numThreads = hardwareThreads > 0 ? hardwareThreads : 4;
     loadPricers(numThreads);
@@ -83,11 +84,6 @@ void ParallelPricer::start(IScalarResultReceiver* resultReceiver)
 }
 
 void ParallelPricer::submit(std::unique_ptr<ITrade> trade)
-{
-    enqueueTrade(std::move(trade));
-}
-
-void ParallelPricer::enqueueTrade(std::unique_ptr<ITrade> trade)
 {
     if (trade == nullptr)
     {

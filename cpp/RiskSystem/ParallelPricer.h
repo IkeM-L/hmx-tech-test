@@ -70,7 +70,6 @@ private:
     void loadPricers(std::size_t workerCount);
     void clearWorkerPricers();
     void workerLoop(std::size_t workerIndex);
-    void enqueueTrade(std::unique_ptr<ITrade> trade);
     void enqueueBorrowedTrade(ITrade& trade);
     void shutdown(bool rethrowFatalError);
     

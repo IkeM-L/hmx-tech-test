@@ -38,7 +38,7 @@ namespace TradeParsingUtils {
         return std::chrono::system_clock::from_time_t(std::mktime(&tm));
     }
 
-    std::vector<std::string> splitLine(const std::string& line, char separator)
+    std::vector<std::string> splitLine(const std::string& line, const char separator)
     {
         std::vector<std::string> items;
         std::stringstream ss(line);

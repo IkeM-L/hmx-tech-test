@@ -33,7 +33,7 @@ int _getch() {
 namespace
 {
     // Set to true to use StreamingTradeLoader.
-    constexpr bool UseStreamingTradeLoader = true;
+    constexpr bool UseStreamingTradeLoader = false;
 
     // If true, uses ParallelPricer. Otherwise, uses SerialPricer.
     constexpr bool UseParallelPricer = true;
@@ -66,7 +66,7 @@ int main(int argc, char* argv[]) {
         }
     } else {
         SerialTradeLoader tradeLoader;
-        auto allTrades = tradeLoader.loadTrades();
+        const auto allTrades = SerialTradeLoader::loadTrades();
 
         if (UseParallelPricer) {
             ParallelPricer pricer;

@@ -35,7 +35,7 @@ public:
         using pointer = ITrade**;
         using reference = ITrade*&;
 
-        explicit iterator(underlying_iterator current) : current_(current) {}
+        explicit iterator(const underlying_iterator current) : current_(current) {}
 
         iterator& operator++() {
             ++current_;

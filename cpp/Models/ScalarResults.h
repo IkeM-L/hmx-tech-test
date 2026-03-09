@@ -19,7 +19,7 @@ public:
     std::optional<ScalarResult> operator[](const std::string& tradeId) const;
 
     /// Returns true when either a result or an error exists for the trade.
-    bool containsTrade(const std::string& tradeId) const;
+    [[nodiscard]] bool containsTrade(const std::string& tradeId) const;
 
     /// Records a scalar pricing result for a trade.
     void addResult(const std::string& tradeId, double result) override;
@@ -63,7 +63,7 @@ public:
     /// Returns an iterator to the first stored result.
     [[nodiscard]] Iterator begin() const;
     /// Returns an iterator one past the last stored result.
-    [[nodiscard]] Iterator end() const;
+    [[nodiscard]] static Iterator end();
 
 private:
     [[nodiscard]] std::shared_ptr<const std::vector<ScalarResult>> buildSnapshot() const;

@@ -68,9 +68,8 @@ ScalarResults::Iterator::pointer ScalarResults::Iterator::operator->() const {
 
 bool ScalarResults::Iterator::operator==(const Iterator& other) const {
     const bool thisIsEnd = snapshot_ == nullptr || index_ >= snapshot_->size();
-    const bool otherIsEnd = other.snapshot_ == nullptr || other.index_ >= other.snapshot_->size();
 
-    if (thisIsEnd || otherIsEnd) {
+    if (const bool otherIsEnd = other.snapshot_ == nullptr || other.index_ >= other.snapshot_->size(); thisIsEnd || otherIsEnd) {
         return thisIsEnd == otherIsEnd;
     }
 
@@ -108,6 +107,7 @@ ScalarResults::Iterator ScalarResults::begin() const {
     return Iterator(this, buildSnapshot(), 0);
 }
 
-ScalarResults::Iterator ScalarResults::end() const {
+ScalarResults::Iterator ScalarResults::end()
+{
     return Iterator();
 }
