@@ -16,6 +16,7 @@ protected:
 
     [[nodiscard]] const std::string& dataFile() const;
     [[nodiscard]] std::ifstream openInputFile() const;
+    // Sample trade files may start with a UTF-8 BOM; strip it so header checks and parsing see the real text.
     static void skipBom(std::string& line);
 
     virtual void forEachTrade(const TradeHandler& tradeHandler) const = 0;

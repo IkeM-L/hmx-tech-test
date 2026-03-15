@@ -4,6 +4,13 @@
 
 #include <stdexcept>
 
+namespace {
+    constexpr std::size_t Utf8BomLength = 3;
+    constexpr unsigned char Utf8BomByte0 = 0xEF;
+    constexpr unsigned char Utf8BomByte1 = 0xBB;
+    constexpr unsigned char Utf8BomByte2 = 0xBF;
+}
+
 const std::string& BaseTradeLoader::dataFile() const
 {
     return dataFile_;
@@ -24,12 +31,14 @@ std::ifstream BaseTradeLoader::openInputFile() const
 
 void BaseTradeLoader::skipBom(std::string& line)
 {
-    if (line.size() >= 3 &&
-        static_cast<unsigned char>(line[0]) == 0xEF &&
-        static_cast<unsigned char>(line[1]) == 0xBB &&
-        static_cast<unsigned char>(line[2]) == 0xBF)
+    // Some input files are UTF-8 encoded with a BOM on the first line. If we leave it in place,
+    // the first token starts with BOM bytes and no longer matches the expected header/content.
+    if (line.size() >= Utf8BomLength &&
+        static_cast<unsigned char>(line[0]) == Utf8BomByte0 &&
+        static_cast<unsigned char>(line[1]) == Utf8BomByte1 &&
+        static_cast<unsigned char>(line[2]) == Utf8BomByte2)
     {
-        line = line.substr(3);
+        line = line.substr(Utf8BomLength);
     }
 }
 

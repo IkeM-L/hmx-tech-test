@@ -5,27 +5,40 @@
 #include <stdexcept>
 #include <vector>
 
+namespace {
+    constexpr std::size_t ExpectedBondFieldCount = 7;
+    constexpr std::size_t TradeTypeIndex = 0;
+    constexpr std::size_t TradeDateIndex = 1;
+    constexpr std::size_t InstrumentIndex = 2;
+    constexpr std::size_t CounterpartyIndex = 3;
+    constexpr std::size_t NotionalIndex = 4;
+    constexpr std::size_t RateIndex = 5;
+    constexpr std::size_t TradeIdIndex = 6;
+}
+
 std::unique_ptr<BondTrade> BondTradeLoader::createTradeFromLine(const std::string& line)
 {
     const std::vector<std::string> items = TradeParsingUtils::splitLine(line, separator);
 
-    if (items.size() != 7)
+    if (items.size() != ExpectedBondFieldCount)
     {
         throw std::runtime_error(
-            "Invalid bond trade line format: expected 7 fields, got " +
+            "Invalid bond trade line format: expected " +
+            std::to_string(ExpectedBondFieldCount) +
+            " fields, got " +
             std::to_string(items.size()));
     }
 
-    const std::string& tradeType = items[0];
-    const std::string& tradeId = items[6];
+    const std::string& tradeType = items[TradeTypeIndex];
+    const std::string& tradeId = items[TradeIdIndex];
 
     auto trade = std::make_unique<BondTrade>(tradeId, tradeType);
 
-    trade->setTradeDate(TradeParsingUtils::parseDate(items[1]));
-    trade->setInstrument(items[2]);
-    trade->setCounterparty(items[3]);
-    trade->setNotional(std::stod(items[4]));
-    trade->setRate(std::stod(items[5]));
+    trade->setTradeDate(TradeParsingUtils::parseDate(items[TradeDateIndex]));
+    trade->setInstrument(items[InstrumentIndex]);
+    trade->setCounterparty(items[CounterpartyIndex]);
+    trade->setNotional(std::stod(items[NotionalIndex]));
+    trade->setRate(std::stod(items[RateIndex]));
 
     return trade;
 }
