@@ -21,7 +21,7 @@ public:
     ~SerialPricer() = default;
     /// Prices owned trade containers sequentially without taking ownership from the caller.
     void price(const std::vector<std::vector<std::unique_ptr<ITrade>>>& tradeContainers,
-               IScalarResultReceiver* resultReceiver);
+               IScalarResultReceiver& resultReceiver);
 };
 
 #endif // SERIALPRICER_H

@@ -1,94 +1,53 @@
 #ifndef PARALLELPRICER_H
 #define PARALLELPRICER_H
 
-#include "../Models/IPricingEngine.h"
 #include "../Models/ITrade.h"
 #include "../Models/IScalarResultReceiver.h"
-#include "PricingEngineFactory.h"
-#include "PricingEngineConfig.h"
-#include <condition_variable>
-#include <deque>
-#include <exception>
-#include <map>
+
 #include <memory>
-#include <mutex>
-#include <string>
-#include <thread>
 #include <vector>
 
 class ParallelPricer {
 private:
-    class LockedScalarResultReceiver : public IScalarResultReceiver {
+    struct Impl;
+
+public:
+    class Session {
     public:
-        explicit LockedScalarResultReceiver(IScalarResultReceiver* inner)
-            : inner_(inner)
-        {
-        }
+        Session(const Session&) = delete;
+        Session& operator=(const Session&) = delete;
+        Session(Session&& other) noexcept = default;
+        Session& operator=(Session&& other) noexcept = default;
+        ~Session();
 
-        void addResult(const std::string& tradeId, double result) override
-        {
-            std::lock_guard lock(mutex_);
-            inner_->addResult(tradeId, result);
-        }
+        /// Submits a streamed trade through an active pricing session.
+        void submit(std::unique_ptr<ITrade> trade) const;
 
-        void addError(const std::string& tradeId, const std::string& error) override
-        {
-            std::lock_guard lock(mutex_);
-            inner_->addError(tradeId, error);
-        }
+        /// Waits for all queued trades to finish processing and closes the session.
+        void finish();
 
     private:
-        IScalarResultReceiver* inner_;
-        std::mutex mutex_;
+        friend class ParallelPricer;
+
+        explicit Session(std::unique_ptr<Impl> impl);
+        void cleanup() noexcept;
+
+        std::unique_ptr<Impl> impl_;
     };
 
-    struct QueuedTrade {
-        // A queue entry can either own a streamed trade or borrow one from the
-        // batch pricing path, which keeps the queue logic shared across both modes.
-        std::unique_ptr<ITrade> ownedTrade;
-        ITrade* borrowedTrade = nullptr;
+    ParallelPricer() = delete;
+    ParallelPricer(const ParallelPricer&) = delete;
+    ParallelPricer& operator=(const ParallelPricer&) = delete;
+    ParallelPricer(ParallelPricer&&) = delete;
+    ParallelPricer& operator=(ParallelPricer&&) = delete;
+    ~ParallelPricer() = delete;
 
-        ITrade* get() const
-        {
-            return ownedTrade ? ownedTrade.get() : borrowedTrade;
-        }
-    };
-
-    PricingEngineConfig pricerConfig_;
-    std::vector<PricingEngineFactory::PricingEngineMap> workerPricers_;
-    std::unique_ptr<LockedScalarResultReceiver> lockedReceiver_;
-    std::deque<QueuedTrade> queue_;
-    std::vector<std::thread> workerThreads_;
-    std::mutex queueMutex_;
-    std::condition_variable queueNotEmpty_;
-    std::condition_variable queueNotFull_;
-    std::mutex fatalErrorMutex_;
-    std::exception_ptr firstFatalError_;
-    std::size_t queueCapacity_ = 0;
-    bool acceptingTrades_ = false;
-    
-    void loadPricers(std::size_t workerCount);
-    void clearWorkerPricers();
-    void workerLoop(std::size_t workerIndex);
-    void enqueueBorrowedTrade(ITrade& trade);
-    void shutdown(bool rethrowFatalError);
-    
-public:
-    /// Stops worker threads and releases any owned pricing engines.
-    ~ParallelPricer();
-
-    /// Starts worker threads and prepares the pricer to receive streamed trades.
-    void start(IScalarResultReceiver* resultReceiver);
-
-    /// Submits a streamed trade and transfers ownership to the pricer.
-    void submit(std::unique_ptr<ITrade> trade);
-
-    /// Waits for all queued trades to finish processing.
-    void finish();
+    /// Starts a move-only session that owns the entire lifecycle of a pricing run.
+    [[nodiscard]] static Session start(IScalarResultReceiver& resultReceiver);
 
     /// Prices owned trade containers in parallel without taking ownership from the caller.
-    void price(const std::vector<std::vector<std::unique_ptr<ITrade>>>& tradeContainers,
-               IScalarResultReceiver* resultReceiver);
+    static void price(const std::vector<std::vector<std::unique_ptr<ITrade>>>& tradeContainers,
+                      IScalarResultReceiver& resultReceiver);
 };
 
 #endif // PARALLELPRICER_H
