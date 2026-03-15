@@ -1,7 +1,5 @@
 #include "SerialPricer.h"
 
-#include <stdexcept>
-
 void SerialPricer::loadPricers() {
     if (!pricers_.empty()) {
         return;

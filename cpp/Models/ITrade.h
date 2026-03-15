@@ -3,7 +3,6 @@
 
 #include <string>
 #include <chrono>
-#include <memory>
 
 class ITrade {
 public:

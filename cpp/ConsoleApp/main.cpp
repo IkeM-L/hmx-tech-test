@@ -15,7 +15,6 @@
 #else
 #include <termios.h>
 #include <unistd.h>
-#include <fcntl.h>
 
 int getch() {
     termios oldt{}, newt{};
@@ -23,7 +22,7 @@ int getch() {
     newt = oldt;
     newt.c_lflag &= ~(ICANON | ECHO);
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-    int ch = getchar();
+    const int ch = getchar();
     tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
     return ch;
 }
@@ -42,6 +41,7 @@ int main() {
     ScalarResults results;
 
     if (UseStreamingTradeLoader) {
+        // ReSharper disable once CppDFAUnreachableCode
         if (UseParallelPricer) {
             auto session = ParallelPricer::start(results);
             StreamingTradeLoader::streamTrades([&session](std::unique_ptr<ITrade> trade) {
@@ -49,6 +49,7 @@ int main() {
             });
             session.finish();
         } else {
+            // ReSharper disable once CppDFAUnreachableCode
             SerialPricer pricer;
             StreamingTradeLoader::streamTrades([&pricer, &results](std::unique_ptr<ITrade> trade) {
                 std::vector<std::vector<std::unique_ptr<ITrade>>> tradeBatch;
@@ -58,11 +59,13 @@ int main() {
             });
         }
     } else {
+        // ReSharper disable once CppDFAUnreachableCode
         const auto allTrades = SerialTradeLoader::loadTrades();
 
         if (UseParallelPricer) {
             ParallelPricer::price(allTrades, results);
         } else {
+            // ReSharper disable once CppDFAUnreachableCode
             SerialPricer pricer;
             pricer.price(allTrades, results);
         }

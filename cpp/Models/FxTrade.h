@@ -3,7 +3,6 @@
 
 #include "BaseTrade.h"
 #include <chrono>
-#include <stdexcept>
 
 class FxTrade : public BaseTrade {
 public:

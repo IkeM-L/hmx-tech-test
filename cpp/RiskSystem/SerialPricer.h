@@ -1,15 +1,12 @@
 #ifndef SERIALPRICER_H
 #define SERIALPRICER_H
 
-#include "../Models/IPricingEngine.h"
 #include "../Models/ITrade.h"
 #include "../Models/IScalarResultReceiver.h"
-#include "PricingConfigLoader.h"
 #include "PricingEngineFactory.h"
 #include <map>
 #include <memory>
 #include <vector>
-#include <string>
 
 class SerialPricer {
 private:
