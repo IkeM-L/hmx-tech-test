@@ -52,10 +52,7 @@ int main() {
             // ReSharper disable once CppDFAUnreachableCode
             SerialPricer pricer;
             StreamingTradeLoader::streamTrades([&pricer, &results](std::unique_ptr<ITrade> trade) {
-                std::vector<std::vector<std::unique_ptr<ITrade>>> tradeBatch;
-                tradeBatch.emplace_back();
-                tradeBatch.back().push_back(std::move(trade));
-                pricer.price(tradeBatch, results);
+                pricer.price(*trade, results);
             });
         }
     } else {
