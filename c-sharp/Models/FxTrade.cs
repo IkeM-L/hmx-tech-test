@@ -18,10 +18,10 @@ namespace HmxLabs.TechTest.Models
             switch (tradeType)
             {
                 case FxForwardTradeType:
-                    _tradeType = FxSpotTradeType;
+                    _tradeType = FxForwardTradeType;
                     break;
                 case FxSpotTradeType:
-                    _tradeType = FxForwardTradeType;
+                    _tradeType = FxSpotTradeType;
                     break;
                 default:
                     throw new ArgumentException($"A valid fx trade type must be used, found {tradeType}");
